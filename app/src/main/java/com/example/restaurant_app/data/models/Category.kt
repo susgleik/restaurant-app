@@ -1,8 +1,8 @@
+// data/models/Category.kt
 package com.example.restaurant_app.data.models
 
 import kotlinx.serialization.Serializable
 
-// data/models/Category.kt
 @Serializable
 data class Category(
     val id: String,

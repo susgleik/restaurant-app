@@ -8,12 +8,12 @@ plugins {
 
 android {
     namespace = "com.example.restaurant_app"
-    compileSdk = 36
+    compileSdk = 35  // CAMBIAR DE 36 A 35
 
     defaultConfig {
         applicationId = "com.example.restaurant_app"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 35  // CAMBIAR DE 36 A 35
         versionCode = 1
         versionName = "1.0"
 
@@ -69,6 +69,9 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
 
+    // AGREGADO: Material Icons Extended - Contiene TODOS los íconos
+    implementation(libs.androidx.material.icons.extended)
+
     // Navigation Compose
     implementation(libs.androidx.navigation.compose)
 
@@ -88,6 +91,8 @@ dependencies {
     // Dependency Injection - Hilt (usando KSP en lugar de kapt)
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.navigation.compose)
+    // ELIMINAR esta línea que da error:
+    // implementation(libs.firebase.crashlytics.buildtools)
     ksp(libs.hilt.compiler)
 
     // DataStore para almacenar tokens
