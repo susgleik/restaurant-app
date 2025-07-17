@@ -10,13 +10,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.restaurant_app.presentation.navigation.RestaurantNavigation
-import com.example.restaurant_app.presentation.viewmodels.AuthViewModel
 import com.example.restaurant_app.ui.theme.RestaurantappTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -40,14 +36,10 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun RestaurantApp() {
-    val authViewModel: AuthViewModel = hiltViewModel()
-    val isLoggedIn by authViewModel.isLoggedIn.collectAsStateWithLifecycle()
-
     Scaffold(
         modifier = Modifier.fillMaxSize()
     ) { innerPadding ->
         RestaurantNavigation(
-            isLoggedIn = isLoggedIn,
             modifier = Modifier.padding(innerPadding)
         )
     }

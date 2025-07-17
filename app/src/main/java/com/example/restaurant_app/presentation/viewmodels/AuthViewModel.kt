@@ -1,244 +1,148 @@
-// presentation/viewmodels/AuthViewModel.kt
 package com.example.restaurant_app.presentation.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.restaurant_app.data.models.*
+import com.example.restaurant_app.data.models.User
 import com.example.restaurant_app.data.repository.AuthRepository
+import com.example.restaurant_app.data.repository.AuthResult
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+data class AuthUiState(
+    val isLoading: Boolean = false,
+    val isLoggedIn: Boolean = false,
+    val user: User? = null,
+    val errorMessage: String? = null,
+    val isLoginSuccessful: Boolean = false
+)
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository
-) : ViewModel(){
-    private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
-    val authState: StateFlow<AuthState> = _authState.asStateFlow()
+) : ViewModel() {
 
-    private val _currentUser = MutableStateFlow<User?>(null)
-    val currentUser: StateFlow<User?> = _currentUser.asStateFlow()
+    private val _uiState = MutableStateFlow(AuthUiState())
+    val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
-    private val _isLoggedIn = MutableStateFlow(false)
-    val isLoggedIn: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
-
-    init{
+    init {
         checkAuthStatus()
     }
 
-    /**
-     * Iniciar sesión
-     */
     fun login(email: String, password: String) {
         viewModelScope.launch {
-            _authState.value = AuthState.Loading
-
-            // Validaciones básicas
-            if (email.isBlank() || password.isBlank()) {
-                _authState.value = AuthState.Error("Por favor completa todos los campos")
-                return@launch
-            }
-
-            if (!isValidEmail(email)) {
-                _authState.value = AuthState.Error("Formato de email inválido")
-                return@launch
-            }
-
-            val result = authRepository.login(UserLogin(email, password))
-            result.fold(
-                onSuccess = { tokenResponse ->
-                    _currentUser.value = tokenResponse.user
-                    _isLoggedIn.value = true
-                    _authState.value = AuthState.Success("Inicio de sesión exitoso")
-                },
-                onFailure = { error ->
-                    _authState.value = AuthState.Error(error.message ?: "Error al iniciar sesión")
+            authRepository.login(email, password).collect { result ->
+                when (result) {
+                    is AuthResult.Loading -> {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = true,
+                            errorMessage = null,
+                            isLoginSuccessful = false
+                        )
+                    }
+                    is AuthResult.Success -> {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            isLoggedIn = true,
+                            user = result.data.user,
+                            errorMessage = null,
+                            isLoginSuccessful = true
+                        )
+                    }
+                    is AuthResult.Error -> {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            isLoggedIn = false,
+                            user = null,
+                            errorMessage = result.message,
+                            isLoginSuccessful = false
+                        )
+                    }
                 }
-            )
+            }
         }
     }
 
-    /**
-     * Registrar nuevo usuario
-     */
-    fun register(username: String, email: String, password: String, confirmPassword: String) {
+    fun register(username: String, email: String, password: String) {
         viewModelScope.launch {
-            _authState.value = AuthState.Loading
-
-            // Validaciones
-            val validation = validateRegistrationData(username, email, password, confirmPassword)
-            if (validation != null) {
-                _authState.value = AuthState.Error(validation)
-                return@launch
-            }
-
-            val result = authRepository.register(
-                UserCreate(username, email, password, UserRole.CLIENT)
-            )
-            result.fold(
-                onSuccess = { tokenResponse ->
-                    _currentUser.value = tokenResponse.user
-                    _isLoggedIn.value = true
-                    _authState.value = AuthState.Success("Registro exitoso")
-                },
-                onFailure = { error ->
-                    _authState.value = AuthState.Error(error.message ?: "Error al registrarse")
+            authRepository.register(username, email, password).collect { result ->
+                when (result) {
+                    is AuthResult.Loading -> {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = true,
+                            errorMessage = null
+                        )
+                    }
+                    is AuthResult.Success -> {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            errorMessage = null
+                        )
+                        // Después del registro exitoso, puedes auto-login
+                    }
+                    is AuthResult.Error -> {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            errorMessage = result.message
+                        )
+                    }
                 }
-            )
+            }
         }
     }
 
-    /**
-     * Cerrar sesión
-     */
     fun logout() {
         viewModelScope.launch {
-            _authState.value = AuthState.Loading
-
-            val result = authRepository.logout()
-            result.fold(
-                onSuccess = {
-                    _currentUser.value = null
-                    _isLoggedIn.value = false
-                    _authState.value = AuthState.Success("Sesión cerrada")
-                },
-                onFailure = { error ->
-                    // Aún si falla el logout en servidor, limpiamos local
-                    _currentUser.value = null
-                    _isLoggedIn.value = false
-                    _authState.value = AuthState.Success("Sesión cerrada")
-                }
-            )
+            authRepository.logout()
+            _uiState.value = AuthUiState() // Reset to initial state
         }
     }
 
-    /**
-     * Verificar estado de autenticación
-     */
-    private fun checkAuthStatus() {
+    fun getCurrentUser() {
         viewModelScope.launch {
-            _authState.value = AuthState.Loading
-
-            if (authRepository.isLoggedIn()) {
-                val result = authRepository.getCurrentUser()
-                result.fold(
-                    onSuccess = { user ->
-                        _currentUser.value = user
-                        _isLoggedIn.value = true
-                        _authState.value = AuthState.Idle
-                    },
-                    onFailure = {
-                        // Si falla obtener usuario, limpiar sesión
-                        authRepository.forceLogout()
-                        _currentUser.value = null
-                        _isLoggedIn.value = false
-                        _authState.value = AuthState.Idle
+            authRepository.getCurrentUser().collect { result ->
+                when (result) {
+                    is AuthResult.Loading -> {
+                        _uiState.value = _uiState.value.copy(isLoading = true)
                     }
-                )
-            } else {
-                _isLoggedIn.value = false
-                _authState.value = AuthState.Idle
+                    is AuthResult.Success -> {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            isLoggedIn = true,
+                            user = result.data,
+                            errorMessage = null
+                        )
+                    }
+                    is AuthResult.Error -> {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            isLoggedIn = false,
+                            user = null,
+                            errorMessage = result.message
+                        )
+                    }
+                }
             }
         }
     }
 
-    /**
-     * Validar sesión actual
-     */
-    fun validateSession() {
+    private fun checkAuthStatus() {
         viewModelScope.launch {
-            val result = authRepository.validateSession()
-            result.fold(
-                onSuccess = { isValid ->
-                    if (!isValid) {
-                        _currentUser.value = null
-                        _isLoggedIn.value = false
-                        _authState.value = AuthState.Error("Sesión expirada")
-                    }
-                },
-                onFailure = { error ->
-                    _currentUser.value = null
-                    _isLoggedIn.value = false
-                    _authState.value = AuthState.Error(error.message ?: "Error de sesión")
-                }
-            )
+            val isLoggedIn = authRepository.isLoggedIn()
+            _uiState.value = _uiState.value.copy(isLoggedIn = isLoggedIn)
+
+            if (isLoggedIn) {
+                getCurrentUser()
+            }
         }
     }
 
-    /**
-     * Limpiar estado de error
-     */
     fun clearError() {
-        if (_authState.value is AuthState.Error) {
-            _authState.value = AuthState.Idle
-        }
+        _uiState.value = _uiState.value.copy(errorMessage = null)
     }
 
-    /**
-     * Limpiar estado de éxito
-     */
-    fun clearSuccess() {
-        if (_authState.value is AuthState.Success) {
-            _authState.value = AuthState.Idle
-        }
+    fun clearLoginSuccess() {
+        _uiState.value = _uiState.value.copy(isLoginSuccessful = false)
     }
-
-    /**
-     * Verificar si el usuario es administrador
-     */
-    fun isAdmin(): Boolean {
-        return _currentUser.value?.role == UserRole.ADMIN_STAFF
-    }
-
-    /**
-     * Obtener información del usuario actual
-     */
-    fun getCurrentUserInfo(): User? {
-        return _currentUser.value
-    }
-
-    // =================== FUNCIONES DE VALIDACIÓN ===================
-
-    private fun validateRegistrationData(
-        username: String,
-        email: String,
-        password: String,
-        confirmPassword: String
-    ): String? {
-        return when {
-            username.isBlank() -> "El nombre de usuario es requerido"
-            username.length < 3 -> "El nombre de usuario debe tener al menos 3 caracteres"
-            username.length > 50 -> "El nombre de usuario no puede tener más de 50 caracteres"
-            email.isBlank() -> "El email es requerido"
-            !isValidEmail(email) -> "Formato de email inválido"
-            password.isBlank() -> "La contraseña es requerida"
-            password.length < 6 -> "La contraseña debe tener al menos 6 caracteres"
-            password != confirmPassword -> "Las contraseñas no coinciden"
-            !isValidPassword(password) -> "La contraseña debe contener al menos una letra y un número"
-            else -> null
-        }
-    }
-
-    private fun isValidEmail(email: String): Boolean {
-        return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
-    }
-
-    private fun isValidPassword(password: String): Boolean {
-        val hasLetter = password.any { it.isLetter() }
-        val hasDigit = password.any { it.isDigit() }
-        return hasLetter && hasDigit
-    }
-}
-
-/**
- * Estados de autenticación
- */
-sealed class AuthState {
-    object Idle : AuthState()
-    object Loading : AuthState()
-    data class Success(val message: String) : AuthState()
-    data class Error(val message: String) : AuthState()
 }

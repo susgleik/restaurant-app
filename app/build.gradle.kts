@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.example.restaurant_app"
-    compileSdk = 35  // CAMBIAR DE 36 A 35
+    compileSdk = 36  // CAMBIAR DE 36 A 35
 
     defaultConfig {
         applicationId = "com.example.restaurant_app"
@@ -20,15 +20,15 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         //Configuracion para URLs base
-        buildConfigField("String", "BASE_URL", "\"https://your-api-domain.com/\"")
+        buildConfigField("String", "BASE_URL", "\"https://restaurant-backend-x0sz.onrender.com/\"")
         buildConfigField("String", "API_VERSION", "\"api/v1/\"")
     }
 
     buildTypes {
         debug {
             isDebuggable = true
-            buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8000/\"") // Para emulador
-            // buildConfigField("String", "BASE_URL", "\"http://192.168.1.XXX:8000/\"") // Para dispositivo físico
+            buildConfigField("String", "BASE_URL", "\"https://restaurant-backend-x0sz.onrender.com/\"") // Para emulador
+            buildConfigField("String", "BASE_URL", "\"https://restaurant-backend-x0sz.onrender.com/\"") // Para dispositivo físico
         }
         release {
             isMinifyEnabled = false

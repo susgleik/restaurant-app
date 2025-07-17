@@ -4,15 +4,12 @@ import com.example.restaurant_app.data.models.*
 import retrofit2.Response
 import retrofit2.http.*
 
-interface AuthApiService{
+interface AuthApiService {
     @POST("auth/register")
-    suspend fun register(@Body request:UserCreate): Response<TokenResponse>
+    suspend fun register(@Body request: RegisterRequest): Response<User>
 
     @POST("auth/login")
-    suspend fun login(@Body request: UserLogin): Response<TokenResponse>
-
-    @POST("auth/refresh")
-    suspend fun refreshToken(@Body request: RefreshTokenRequest): Response<TokenResponse>
+    suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
 
     @GET("auth/me")
     suspend fun getCurrentUser(): Response<User>
