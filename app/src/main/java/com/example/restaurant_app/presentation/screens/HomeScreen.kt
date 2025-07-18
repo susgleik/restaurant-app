@@ -1,5 +1,7 @@
 package com.example.restaurant_app.presentation.screens
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -19,7 +21,7 @@ import com.example.restaurant_app.data.models.MenuItem
 import com.example.restaurant_app.presentation.screens.menu.MenuItemDetailScreen
 import com.example.restaurant_app.presentation.screens.menu.MenuScreen
 //import com.example.restaurant_app.presentation.screens.orders.OrdersScreen
-//import com.example.restaurant_app.presentation.screens.profile.ProfileScreen
+import com.example.restaurant_app.presentation.screens.profile.ProfileScreen
 
 // Definición de las rutas de navegación
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
@@ -29,6 +31,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object Profile : Screen("profile", "Perfil", Icons.Default.Person)
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -115,11 +118,12 @@ fun HomeScreen(
                 OrdersScreen()
             }
 
+             */
             composable(Screen.Profile.route) {
                 ProfileScreen(
                     onLogout = onLogout
                 )
-            } */
+            }
 
             // Pantalla de detalle del item del menú
             composable("menu_item_detail/{itemId}") { backStackEntry ->

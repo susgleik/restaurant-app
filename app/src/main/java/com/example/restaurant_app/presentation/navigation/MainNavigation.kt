@@ -1,5 +1,7 @@
 package com.example.restaurant_app.presentation.navigation
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -13,6 +15,7 @@ import androidx.navigation.navigation
 import com.example.restaurant_app.presentation.screens.HomeScreen
 import com.example.restaurant_app.presentation.viewmodels.AuthViewModel
 
+@RequiresApi(Build.VERSION_CODES.O)
 fun NavGraphBuilder.mainNavigation(
     navController: NavHostController,
     onLogout: () -> Unit
