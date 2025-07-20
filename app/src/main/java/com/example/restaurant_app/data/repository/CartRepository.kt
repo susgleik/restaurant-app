@@ -16,7 +16,7 @@ class CartRepository @Inject constructor(
      */
     suspend fun getCart(): Result<CartList> {
         return try {
-            val response = cartApiService.getCart()
+            val response = cartApiService.getCart(includeUnavailable = false)
             if (response.isSuccessful) {
                 response.body()?.let { cartList ->
                     Result.success(cartList)
@@ -38,8 +38,9 @@ class CartRepository @Inject constructor(
     /**
      * Agregar item al carrito
      */
-    suspend fun addToCart(item: CartItemCreate): Result<CartItem> {
+    suspend fun addToCart(menuItemId: String, quantity: Int = 1): Result<CartItem> {
         return try {
+            val item = CartItemCreate(menuItemId, quantity)
             val response = cartApiService.addToCart(item)
             if (response.isSuccessful) {
                 response.body()?.let { cartItem ->
@@ -64,9 +65,10 @@ class CartRepository @Inject constructor(
     /**
      * Actualizar cantidad de item en carrito
      */
-    suspend fun updateCartItem(id: String, item: CartItemUpdate): Result<CartItem> {
+    suspend fun updateCartItem(cartItemId: String, quantity: Int): Result<CartItem> {
         return try {
-            val response = cartApiService.updateCartItem(id, item)
+            val update = CartItemUpdate(quantity)
+            val response = cartApiService.updateCartItem(cartItemId, update)
             if (response.isSuccessful) {
                 response.body()?.let { cartItem ->
                     Result.success(cartItem)
@@ -90,9 +92,9 @@ class CartRepository @Inject constructor(
     /**
      * Eliminar item del carrito
      */
-    suspend fun removeFromCart(id: String): Result<Unit> {
+    suspend fun removeFromCart(cartItemId: String): Result<Unit> {
         return try {
-            val response = cartApiService.removeFromCart(id)
+            val response = cartApiService.removeFromCart(cartItemId)
             if (response.isSuccessful) {
                 Result.success(Unit)
             } else {
@@ -131,71 +133,13 @@ class CartRepository @Inject constructor(
     }
 
     /**
-     * Verificar si hay items en el carrito
-     */
-    suspend fun hasItemsInCart(): Result<Boolean> {
-        return getCart().fold(
-            onSuccess = { cartList ->
-                Result.success(cartList.items.isNotEmpty())
-            },
-            onFailure = { error ->
-                Result.failure(error)
-            }
-        )
-    }
-
-    /**
-     * Obtener cantidad total de items en carrito
-     */
-    suspend fun getCartItemCount(): Result<Int> {
-        return getCart().fold(
-            onSuccess = { cartList ->
-                val totalItems = cartList.items.sumOf { it.quantity }
-                Result.success(totalItems)
-            },
-            onFailure = { error ->
-                Result.failure(error)
-            }
-        )
-    }
-
-    /**
-     * Obtener monto total del carrito
-     */
-    suspend fun getCartTotal(): Result<Double> {
-        return getCart().fold(
-            onSuccess = { cartList ->
-                Result.success(cartList.total_amount)
-            },
-            onFailure = { error ->
-                Result.failure(error)
-            }
-        )
-    }
-
-    /**
      * Verificar si un item específico está en el carrito
      */
-    suspend fun isItemInCart(menuItemId: String): Result<Boolean> {
-        return getCart().fold(
-            onSuccess = { cartList ->
-                val isInCart = cartList.items.any { it.menu_item_id == menuItemId }
-                Result.success(isInCart)
-            },
-            onFailure = { error ->
-                Result.failure(error)
-            }
-        )
-    }
-
-    /**
-     * Obtener la cantidad de un item específico en el carrito
-     */
-    suspend fun getItemQuantityInCart(menuItemId: String): Result<Int> {
+    suspend fun getCartItemByMenuId(menuItemId: String): Result<CartItem?> {
         return getCart().fold(
             onSuccess = { cartList ->
                 val cartItem = cartList.items.find { it.menu_item_id == menuItemId }
-                Result.success(cartItem?.quantity ?: 0)
+                Result.success(cartItem)
             },
             onFailure = { error ->
                 Result.failure(error)
@@ -217,10 +161,10 @@ class CartRepository @Inject constructor(
                     if (existingItem != null) {
                         // Si existe, incrementar cantidad
                         val newQuantity = existingItem.quantity + 1
-                        updateCartItem(existingItem.id, CartItemUpdate(newQuantity))
+                        updateCartItem(existingItem.id, newQuantity)
                     } else {
                         // Si no existe, agregar nuevo
-                        addToCart(CartItemCreate(menuItemId, 1))
+                        addToCart(menuItemId, 1)
                     }
                 },
                 onFailure = { error ->
@@ -246,7 +190,7 @@ class CartRepository @Inject constructor(
                         if (existingItem.quantity > 1) {
                             // Si la cantidad es mayor a 1, decrementar
                             val newQuantity = existingItem.quantity - 1
-                            updateCartItem(existingItem.id, CartItemUpdate(newQuantity))
+                            updateCartItem(existingItem.id, newQuantity)
                                 .fold(
                                     onSuccess = { Result.success(Unit) },
                                     onFailure = { error -> Result.failure(error) }
@@ -271,7 +215,7 @@ class CartRepository @Inject constructor(
     /**
      * Establecer cantidad específica de un item
      */
-    suspend fun setItemQuantity(menuItemId: String, quantity: Int): Result<CartItem> {
+    suspend fun setItemQuantity(menuItemId: String, quantity: Int): Result<CartItem?> {
         return try {
             if (quantity <= 0) {
                 // Si la cantidad es 0 o menor, eliminar el item
@@ -281,13 +225,11 @@ class CartRepository @Inject constructor(
                         val existingItem = cartList.items.find { it.menu_item_id == menuItemId }
                         if (existingItem != null) {
                             removeFromCart(existingItem.id).fold(
-                                onSuccess = {
-                                    Result.failure(Exception("Item eliminado del carrito"))
-                                },
+                                onSuccess = { Result.success(null) },
                                 onFailure = { error -> Result.failure(error) }
                             )
                         } else {
-                            Result.failure(Exception("Item no encontrado en el carrito"))
+                            Result.success(null)
                         }
                     },
                     onFailure = { error -> Result.failure(error) }
@@ -301,10 +243,10 @@ class CartRepository @Inject constructor(
 
                         if (existingItem != null) {
                             // Actualizar cantidad existente
-                            updateCartItem(existingItem.id, CartItemUpdate(quantity))
+                            updateCartItem(existingItem.id, quantity)
                         } else {
                             // Agregar nuevo item con la cantidad especificada
-                            addToCart(CartItemCreate(menuItemId, quantity))
+                            addToCart(menuItemId, quantity)
                         }
                     },
                     onFailure = { error -> Result.failure(error) }
@@ -322,10 +264,10 @@ class CartRepository @Inject constructor(
         return getCart().fold(
             onSuccess = { cartList ->
                 val summary = CartSummary(
-                    itemCount = cartList.items.sumOf { it.quantity },
-                    totalAmount = cartList.total_amount,
-                    itemsCount = cartList.items.size,
-                    isEmpty = cartList.items.isEmpty()
+                    itemCount = cartList.total_quantity,
+                    totalAmount = cartList.totalAmount,
+                    itemsCount = cartList.total_items,
+                    isEmpty = cartList.is_empty
                 )
                 Result.success(summary)
             },

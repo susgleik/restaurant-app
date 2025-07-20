@@ -12,15 +12,11 @@ class OrderRepository @Inject constructor(
 ) {
 
     /**
-     * Obtener pedidos del usuario actual
+     * Obtener lista de pedidos del usuario
      */
-    suspend fun getOrders(
-        status: String? = null,
-        skip: Int = 0,
-        limit: Int = 50
-    ): Result<OrderList> {
+    suspend fun getOrders(skip: Int = 0, limit: Int = 50): Result<OrderList> {
         return try {
-            val response = orderApiService.getOrders(status, skip, limit)
+            val response = orderApiService.getOrders(skip, limit)
             if (response.isSuccessful) {
                 response.body()?.let { orderList ->
                     Result.success(orderList)
@@ -29,7 +25,6 @@ class OrderRepository @Inject constructor(
                 val errorMessage = when (response.code()) {
                     401 -> "Sesión expirada"
                     403 -> "No autorizado"
-                    400 -> "Parámetros inválidos"
                     else -> "Error al cargar pedidos: ${response.message()}"
                 }
                 Result.failure(Exception(errorMessage))
@@ -40,21 +35,20 @@ class OrderRepository @Inject constructor(
     }
 
     /**
-     * Obtener pedido específico por ID
+     * Obtener pedido por ID
      */
-    suspend fun getOrder(id: String): Result<Order> {
+    suspend fun getOrderById(orderId: String): Result<Order> {
         return try {
-            val response = orderApiService.getOrder(id)
+            val response = orderApiService.getOrderById(orderId)
             if (response.isSuccessful) {
                 response.body()?.let { order ->
                     Result.success(order)
                 } ?: Result.failure(Exception("Pedido no encontrado"))
             } else {
                 val errorMessage = when (response.code()) {
-                    404 -> "Pedido no encontrado"
                     401 -> "Sesión expirada"
-                    403 -> "No tienes acceso a este pedido"
-                    400 -> "ID de pedido inválido"
+                    403 -> "No autorizado"
+                    404 -> "Pedido no encontrado"
                     else -> "Error al cargar pedido: ${response.message()}"
                 }
                 Result.failure(Exception(errorMessage))
@@ -65,22 +59,22 @@ class OrderRepository @Inject constructor(
     }
 
     /**
-     * Crear nuevo pedido
+     * Crear nuevo pedido manualmente
      */
-    suspend fun createOrder(order: OrderCreate): Result<Order> {
+    suspend fun createOrder(items: List<OrderItemCreate>, notes: String? = null): Result<Order> {
         return try {
-            val response = orderApiService.createOrder(order)
+            val orderCreate = OrderCreate(items, notes)
+            val response = orderApiService.createOrder(orderCreate)
             if (response.isSuccessful) {
-                response.body()?.let { createdOrder ->
-                    Result.success(createdOrder)
+                response.body()?.let { order ->
+                    Result.success(order)
                 } ?: Result.failure(Exception("Error al crear pedido"))
             } else {
                 val errorMessage = when (response.code()) {
-                    400 -> "Datos del pedido inválidos o items no disponibles"
+                    400 -> "Datos del pedido inválidos"
                     401 -> "Sesión expirada"
                     403 -> "No autorizado"
-                    404 -> "Uno o más items no encontrados"
-                    422 -> "Datos mal formateados"
+                    422 -> "Items no válidos o no disponibles"
                     else -> "Error al crear pedido: ${response.message()}"
                 }
                 Result.failure(Exception(errorMessage))
@@ -91,23 +85,22 @@ class OrderRepository @Inject constructor(
     }
 
     /**
-     * Crear pedido desde el carrito actual
+     * Crear pedido desde el carrito
      */
     suspend fun createOrderFromCart(notes: String? = null): Result<Order> {
         return try {
-            val notesMap = mapOf("notes" to notes)
-            val response = orderApiService.createOrderFromCart(notesMap)
+            val response = orderApiService.createOrderFromCart(notes)
             if (response.isSuccessful) {
                 response.body()?.let { order ->
                     Result.success(order)
                 } ?: Result.failure(Exception("Error al crear pedido desde carrito"))
             } else {
                 val errorMessage = when (response.code()) {
-                    400 -> "Carrito vacío o items no disponibles"
+                    400 -> "Carrito vacío o items no válidos"
                     401 -> "Sesión expirada"
                     403 -> "No autorizado"
-                    404 -> "Carrito no encontrado"
-                    else -> "Error al crear pedido desde carrito: ${response.message()}"
+                    422 -> "Items del carrito no disponibles"
+                    else -> "Error al crear pedido: ${response.message()}"
                 }
                 Result.failure(Exception(errorMessage))
             }
@@ -117,23 +110,20 @@ class OrderRepository @Inject constructor(
     }
 
     /**
-     * Actualizar estado de un pedido (solo ADMIN)
+     * Cancelar pedido
      */
-    suspend fun updateOrderStatus(id: String, status: OrderStatus): Result<Order> {
+    suspend fun cancelOrder(orderId: String): Result<Unit> {
         return try {
-            val response = orderApiService.updateOrderStatus(id, status.name)
+            val response = orderApiService.cancelOrder(orderId)
             if (response.isSuccessful) {
-                response.body()?.let { order ->
-                    Result.success(order)
-                } ?: Result.failure(Exception("Error al actualizar estado"))
+                Result.success(Unit)
             } else {
                 val errorMessage = when (response.code()) {
-                    404 -> "Pedido no encontrado"
-                    400 -> "Estado inválido o transición no permitida"
+                    400 -> "No se puede cancelar este pedido"
                     401 -> "Sesión expirada"
-                    403 -> "Sin permisos de administrador"
-                    422 -> "Estado mal formateado"
-                    else -> "Error al actualizar estado: ${response.message()}"
+                    403 -> "No autorizado"
+                    404 -> "Pedido no encontrado"
+                    else -> "Error al cancelar pedido: ${response.message()}"
                 }
                 Result.failure(Exception(errorMessage))
             }
@@ -143,302 +133,73 @@ class OrderRepository @Inject constructor(
     }
 
     /**
-     * Cancelar pedido (solo si está en estado PENDING)
+     * Obtener pedidos activos (PENDING, IN_PREPARATION, READY)
      */
-    suspend fun cancelOrder(id: String): Result<Order> {
-        return updateOrderStatus(id, OrderStatus.CANCELLED)
-    }
-
-    /**
-     * Obtener pedidos activos del usuario (PENDING, IN_PREPARATION, READY)
-     */
-    suspend fun getActiveOrders(): Result<OrderList> {
-        return try {
-            // Hacer múltiples llamadas para cada estado activo
-            val pendingResult = getOrders(status = "PENDING")
-            val preparingResult = getOrders(status = "IN_PREPARATION")
-            val readyResult = getOrders(status = "READY")
-
-            val allOrders = mutableListOf<Order>()
-            var totalCount = 0
-
-            pendingResult.getOrNull()?.let {
-                allOrders.addAll(it.orders)
-                totalCount += it.total
+    suspend fun getActiveOrders(): Result<List<Order>> {
+        return getOrders().fold(
+            onSuccess = { orderList ->
+                val activeOrders = orderList.orders.filter { order ->
+                    order.status in listOf(
+                        OrderStatus.PENDING,
+                        OrderStatus.IN_PREPARATION,
+                        OrderStatus.READY
+                    )
+                }.sortedByDescending { it.created_at }
+                Result.success(activeOrders)
+            },
+            onFailure = { error ->
+                Result.failure(error)
             }
-            preparingResult.getOrNull()?.let {
-                allOrders.addAll(it.orders)
-                totalCount += it.total
-            }
-            readyResult.getOrNull()?.let {
-                allOrders.addAll(it.orders)
-                totalCount += it.total
-            }
-
-            // Ordenar por fecha de creación (más recientes primero)
-            val sortedOrders = allOrders.sortedByDescending { it.created_at }
-
-            Result.success(OrderList(orders = sortedOrders, total = totalCount))
-        } catch (e: Exception) {
-            Result.failure(Exception("Error al obtener pedidos activos: ${e.message}"))
-        }
+        )
     }
 
     /**
      * Obtener historial de pedidos (DELIVERED, CANCELLED)
      */
-    suspend fun getOrderHistory(): Result<OrderList> {
-        return try {
-            val deliveredResult = getOrders(status = "DELIVERED")
-            val cancelledResult = getOrders(status = "CANCELLED")
-
-            val allOrders = mutableListOf<Order>()
-            var totalCount = 0
-
-            deliveredResult.getOrNull()?.let {
-                allOrders.addAll(it.orders)
-                totalCount += it.total
-            }
-            cancelledResult.getOrNull()?.let {
-                allOrders.addAll(it.orders)
-                totalCount += it.total
-            }
-
-            // Ordenar por fecha de creación (más recientes primero)
-            val sortedOrders = allOrders.sortedByDescending { it.created_at }
-
-            Result.success(OrderList(orders = sortedOrders, total = totalCount))
-        } catch (e: Exception) {
-            Result.failure(Exception("Error al obtener historial: ${e.message}"))
-        }
-    }
-
-    /**
-     * Obtener el pedido más reciente del usuario
-     */
-    suspend fun getLatestOrder(): Result<Order?> {
-        return try {
-            val result = getOrders(limit = 1)
-            result.fold(
-                onSuccess = { orderList ->
-                    val latestOrder = orderList.orders.firstOrNull()
-                    Result.success(latestOrder)
-                },
-                onFailure = { error ->
-                    Result.failure(error)
-                }
-            )
-        } catch (e: Exception) {
-            Result.failure(Exception("Error al obtener último pedido: ${e.message}"))
-        }
-    }
-
-    /**
-     * Verificar si el usuario puede cancelar un pedido
-     */
-    suspend fun canCancelOrder(orderId: String): Result<Boolean> {
-        return try {
-            val result = getOrder(orderId)
-            result.fold(
-                onSuccess = { order ->
-                    val canCancel = order.status == OrderStatus.PENDING
-                    Result.success(canCancel)
-                },
-                onFailure = { error ->
-                    Result.failure(error)
-                }
-            )
-        } catch (e: Exception) {
-            Result.failure(Exception("Error al verificar cancelación: ${e.message}"))
-        }
-    }
-
-    // =================== FUNCIONES PARA ADMIN ===================
-
-    /**
-     * Obtener todos los pedidos (solo ADMIN)
-     */
-    suspend fun getAllOrdersAdmin(
-        status: String? = null,
-        userId: String? = null,
-        skip: Int = 0,
-        limit: Int = 50
-    ): Result<OrderList> {
-        return try {
-            val response = orderApiService.getAllOrdersAdmin(status, userId, skip, limit)
-            if (response.isSuccessful) {
-                response.body()?.let { orderList ->
-                    Result.success(orderList)
-                } ?: Result.failure(Exception("Respuesta vacía del servidor"))
-            } else {
-                val errorMessage = when (response.code()) {
-                    401 -> "Sesión expirada"
-                    403 -> "Sin permisos de administrador"
-                    400 -> "Parámetros inválidos"
-                    else -> "Error al cargar pedidos: ${response.message()}"
-                }
-                Result.failure(Exception(errorMessage))
-            }
-        } catch (e: Exception) {
-            Result.failure(Exception("Error de conexión: ${e.message}"))
-        }
-    }
-
-    /**
-     * Obtener pedidos pendientes para cocina (solo ADMIN)
-     */
-    suspend fun getPendingOrdersForKitchen(): Result<OrderList> {
-        return getAllOrdersAdmin(status = "PENDING")
-    }
-
-    /**
-     * Obtener pedidos en preparación (solo ADMIN)
-     */
-    suspend fun getOrdersInPreparation(): Result<OrderList> {
-        return getAllOrdersAdmin(status = "IN_PREPARATION")
-    }
-
-    /**
-     * Obtener pedidos listos para entregar (solo ADMIN)
-     */
-    suspend fun getReadyOrders(): Result<OrderList> {
-        return getAllOrdersAdmin(status = "READY")
-    }
-
-    /**
-     * Obtener todos los pedidos entregados (solo ADMIN)
-     */
-    suspend fun getDeliveredOrders(): Result<OrderList> {
-        return getAllOrdersAdmin(status = "DELIVERED")
-    }
-
-    /**
-     * Obtener todos los pedidos cancelados (solo ADMIN)
-     */
-    suspend fun getCancelledOrders(): Result<OrderList> {
-        return getAllOrdersAdmin(status = "CANCELLED")
-    }
-
-    /**
-     * Marcar pedido como en preparación (solo ADMIN)
-     */
-    suspend fun markOrderInPreparation(id: String): Result<Order> {
-        return updateOrderStatus(id, OrderStatus.IN_PREPARATION)
-    }
-
-    /**
-     * Marcar pedido como listo (solo ADMIN)
-     */
-    suspend fun markOrderReady(id: String): Result<Order> {
-        return updateOrderStatus(id, OrderStatus.READY)
-    }
-
-    /**
-     * Marcar pedido como entregado (solo ADMIN)
-     */
-    suspend fun markOrderDelivered(id: String): Result<Order> {
-        return updateOrderStatus(id, OrderStatus.DELIVERED)
-    }
-
-    /**
-     * Cancelar pedido como admin (solo ADMIN)
-     */
-    suspend fun cancelOrderAdmin(id: String): Result<Order> {
-        return updateOrderStatus(id, OrderStatus.CANCELLED)
-    }
-
-    /**
-     * Obtener estadísticas de pedidos del día (solo ADMIN)
-     */
-    suspend fun getTodayOrderStats(): Result<OrderStats> {
-        return try {
-            val allOrdersResult = getAllOrdersAdmin(limit = 1000) // Obtener más pedidos para estadísticas
-
-            allOrdersResult.fold(
-                onSuccess = { orderList ->
-                    val today = java.time.LocalDate.now().toString()
-                    val todayOrders = orderList.orders.filter { order ->
-                        order.created_at.startsWith(today)
-                    }
-
-                    val stats = OrderStats(
-                        total = todayOrders.size,
-                        pending = todayOrders.count { it.status == OrderStatus.PENDING },
-                        inPreparation = todayOrders.count { it.status == OrderStatus.IN_PREPARATION },
-                        ready = todayOrders.count { it.status == OrderStatus.READY },
-                        delivered = todayOrders.count { it.status == OrderStatus.DELIVERED },
-                        cancelled = todayOrders.count { it.status == OrderStatus.CANCELLED },
-                        totalRevenue = todayOrders
-                            .filter { it.status == OrderStatus.DELIVERED }
-                            .sumOf { it.total },
-                        averageOrderValue = if (todayOrders.isNotEmpty()) {
-                            todayOrders.sumOf { it.total } / todayOrders.size
-                        } else 0.0
+    suspend fun getOrderHistory(): Result<List<Order>> {
+        return getOrders().fold(
+            onSuccess = { orderList ->
+                val historyOrders = orderList.orders.filter { order ->
+                    order.status in listOf(
+                        OrderStatus.DELIVERED,
+                        OrderStatus.CANCELLED
                     )
-
-                    Result.success(stats)
-                },
-                onFailure = { error ->
-                    Result.failure(error)
-                }
-            )
-        } catch (e: Exception) {
-            Result.failure(Exception("Error al obtener estadísticas: ${e.message}"))
-        }
+                }.sortedByDescending { it.created_at }
+                Result.success(historyOrders)
+            },
+            onFailure = { error ->
+                Result.failure(error)
+            }
+        )
     }
 
     /**
-     * Obtener pedidos de un usuario específico (solo ADMIN)
+     * Verificar si hay pedidos pendientes
      */
-    suspend fun getUserOrders(userId: String): Result<OrderList> {
-        return getAllOrdersAdmin(userId = userId)
+    suspend fun hasPendingOrders(): Result<Boolean> {
+        return getActiveOrders().fold(
+            onSuccess = { activeOrders ->
+                val hasPending = activeOrders.any { it.status == OrderStatus.PENDING }
+                Result.success(hasPending)
+            },
+            onFailure = { error ->
+                Result.failure(error)
+            }
+        )
     }
 
     /**
-     * Obtener resumen de todos los pedidos activos (solo ADMIN)
+     * Obtener conteo de pedidos por estado
      */
-    suspend fun getActiveOrdersSummary(): Result<AdminOrderSummary> {
-        return try {
-            val pendingResult = getPendingOrdersForKitchen()
-            val preparingResult = getOrdersInPreparation()
-            val readyResult = getReadyOrders()
-
-            val summary = AdminOrderSummary(
-                pendingCount = pendingResult.getOrNull()?.total ?: 0,
-                preparingCount = preparingResult.getOrNull()?.total ?: 0,
-                readyCount = readyResult.getOrNull()?.total ?: 0,
-                totalActiveOrders = (pendingResult.getOrNull()?.total ?: 0) +
-                        (preparingResult.getOrNull()?.total ?: 0) +
-                        (readyResult.getOrNull()?.total ?: 0)
-            )
-
-            Result.success(summary)
-        } catch (e: Exception) {
-            Result.failure(Exception("Error al obtener resumen: ${e.message}"))
-        }
+    suspend fun getOrderStatusCounts(): Result<Map<OrderStatus, Int>> {
+        return getOrders().fold(
+            onSuccess = { orderList ->
+                val counts = orderList.orders.groupingBy { it.status }.eachCount()
+                Result.success(counts)
+            },
+            onFailure = { error ->
+                Result.failure(error)
+            }
+        )
     }
 }
-
-/**
- * Clase de datos para estadísticas de pedidos
- */
-data class OrderStats(
-    val total: Int,
-    val pending: Int,
-    val inPreparation: Int,
-    val ready: Int,
-    val delivered: Int,
-    val cancelled: Int,
-    val totalRevenue: Double,
-    val averageOrderValue: Double
-)
-
-/**
- * Clase de datos para resumen de pedidos activos (Admin)
- */
-data class AdminOrderSummary(
-    val pendingCount: Int,
-    val preparingCount: Int,
-    val readyCount: Int,
-    val totalActiveOrders: Int
-)

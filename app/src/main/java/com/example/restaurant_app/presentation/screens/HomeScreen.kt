@@ -3,12 +3,17 @@ package com.example.restaurant_app.presentation.screens
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -16,12 +21,17 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.restaurant_app.data.models.MenuItem
-//import com.example.restaurant_app.presentation.screens.cart.CartScreen
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.restaurant_app.presentation.screens.cart.CartScreen
 import com.example.restaurant_app.presentation.screens.menu.MenuItemDetailScreen
 import com.example.restaurant_app.presentation.screens.menu.MenuScreen
-//import com.example.restaurant_app.presentation.screens.orders.OrdersScreen
+import com.example.restaurant_app.presentation.screens.orders.OrdersScreen
+import com.example.restaurant_app.presentation.screens.orders.OrderStatusChip
 import com.example.restaurant_app.presentation.screens.profile.ProfileScreen
+import com.example.restaurant_app.presentation.viewmodels.CartViewModel
+import java.text.SimpleDateFormat
+import java.util.*
 
 // Definición de las rutas de navegación
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
@@ -37,10 +47,12 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
 fun HomeScreen(
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
-    navController: NavHostController = rememberNavController()
+    navController: NavHostController = rememberNavController(),
+    cartViewModel: CartViewModel = hiltViewModel()
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+    val cartSummary by cartViewModel.cartSummary.collectAsStateWithLifecycle()
 
     // Lista de pantallas para la navegación inferior
     val bottomNavScreens = listOf(
@@ -56,10 +68,21 @@ fun HomeScreen(
                 bottomNavScreens.forEach { screen ->
                     NavigationBarItem(
                         icon = {
-                            Icon(
-                                imageVector = screen.icon,
-                                contentDescription = screen.title
-                            )
+                            BadgedBox(
+                                badge = {
+                                    // Mostrar badge en el carrito si hay items
+                                    if (screen == Screen.Cart && cartSummary != null && !cartSummary!!.isEmpty) {
+                                        Badge {
+                                            Text(cartSummary!!.itemCount.toString())
+                                        }
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = screen.icon,
+                                    contentDescription = screen.title
+                                )
+                            }
                         },
                         label = { Text(screen.title) },
                         selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
@@ -92,13 +115,11 @@ fun HomeScreen(
                         navController.navigate("menu_item_detail/${menuItem.id}")
                     },
                     onAddToCart = { menuItem ->
-                        // TODO: Implementar lógica para agregar al carrito
-                        addToCart(menuItem, 1)
+                        cartViewModel.addToCart(menuItem.id, 1)
                     }
                 )
             }
 
-            /*
             composable(Screen.Cart.route) {
                 CartScreen(
                     onNavigateToMenu = {
@@ -109,16 +130,27 @@ fun HomeScreen(
                             launchSingleTop = true
                             restoreState = true
                         }
+                    },
+                    onNavigateToOrders = {
+                        navController.navigate(Screen.Orders.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 )
             }
 
-
             composable(Screen.Orders.route) {
-                OrdersScreen()
+                OrdersScreen(
+                    onOrderClick = { orderId ->
+                        navController.navigate("order_detail/$orderId")
+                    }
+                )
             }
 
-             */
             composable(Screen.Profile.route) {
                 ProfileScreen(
                     onLogout = onLogout
@@ -134,8 +166,18 @@ fun HomeScreen(
                         navController.popBackStack()
                     },
                     onAddToCart = { itemId, quantity ->
-                        // TODO: Implementar lógica para agregar al carrito con cantidad
-                        addToCartWithQuantity(itemId, quantity)
+                        cartViewModel.addToCart(itemId, quantity)
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            // Pantalla de detalle del pedido
+            composable("order_detail/{orderId}") { backStackEntry ->
+                val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
+                OrderDetailScreen(
+                    orderId = orderId,
+                    onNavigateBack = {
                         navController.popBackStack()
                     }
                 )
@@ -144,14 +186,228 @@ fun HomeScreen(
     }
 }
 
-// Función temporal para simular agregar al carrito
-private fun addToCart(menuItem: MenuItem, quantity: Int) {
-    // TODO: Implementar con CartViewModel
-    println("Agregando al carrito: ${menuItem.name} x$quantity")
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun OrderDetailScreen(
+    orderId: String,
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: com.example.restaurant_app.presentation.viewmodels.OrderViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(orderId) {
+        viewModel.loadOrderDetails(orderId)
+    }
+
+    Column(modifier = modifier.fillMaxSize()) {
+        TopAppBar(
+            title = { Text("Detalle del Pedido") },
+            navigationIcon = {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Volver"
+                    )
+                }
+            }
+        )
+
+        when {
+            uiState.isLoading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = androidx.compose.ui.Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+
+            uiState.errorMessage != null -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = uiState.errorMessage!!,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = { viewModel.loadOrderDetails(orderId) }) {
+                        Text("Reintentar")
+                    }
+                }
+            }
+
+            uiState.selectedOrder != null -> {
+                OrderDetailContent(
+                    order = uiState.selectedOrder!!,
+                    onCancelOrder = { viewModel.cancelOrder(orderId) },
+                    isCancelling = uiState.isCancelling
+                )
+            }
+        }
+    }
 }
 
-// Función temporal para agregar al carrito con cantidad específica
-private fun addToCartWithQuantity(itemId: String, quantity: Int) {
-    // TODO: Implementar con CartViewModel
-    println("Agregando al carrito: Item $itemId x$quantity")
+@Composable
+private fun OrderDetailContent(
+    order: com.example.restaurant_app.data.models.Order,
+    onCancelOrder: () -> Unit,
+    isCancelling: Boolean
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            // Header del pedido
+            Card {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Pedido #${order.id.takeLast(8)}",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        OrderStatusChip(status = order.status)
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Fecha: ${formatDate(order.created_at)}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    if (order.notes?.isNotBlank() == true) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Notas: ${order.notes}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+
+        // Items del pedido
+        items(order.items) { item ->
+            Card {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = item.menu_item_name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Cantidad: ${item.quantity}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "Precio unitario: ${item.unit_price}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        item.special_instructions?.let { instructions ->
+                            if (instructions.isNotBlank()) {
+                                Text(
+                                    text = "Instrucciones: $instructions",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+
+                    Text(
+                        text = item.subtotal,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+
+        item {
+            // Total del pedido
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Total del pedido",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = order.total,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+
+        // Botón de cancelar si es posible
+        if (order.canBeCancelled) {
+            item {
+                Button(
+                    onClick = onCancelOrder,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isCancelling,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    if (isCancelling) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onError
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Text("Cancelar Pedido")
+                }
+            }
+        }
+    }
+}
+
+// Función auxiliar para formatear fechas
+private fun formatDate(dateString: String): String {
+    return try {
+        val inputFormat = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS", java.util.Locale.getDefault())
+        val outputFormat = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault())
+        val date = inputFormat.parse(dateString)
+        outputFormat.format(date ?: java.util.Date())
+    } catch (e: Exception) {
+        dateString
+    }
 }

@@ -23,6 +23,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.restaurant_app.data.models.MenuItemWithCategory
 import com.example.restaurant_app.presentation.viewmodels.MenuViewModel
+import com.example.restaurant_app.presentation.viewmodels.CartViewModel
 import java.text.NumberFormat
 import java.util.*
 
@@ -33,35 +34,62 @@ fun MenuItemDetailScreen(
     onNavigateBack: () -> Unit,
     onAddToCart: (String, Int) -> Unit, // itemId, quantity
     modifier: Modifier = Modifier,
-    viewModel: MenuViewModel = hiltViewModel()
+    menuViewModel: MenuViewModel = hiltViewModel(),
+    cartViewModel: CartViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val menuUiState by menuViewModel.uiState.collectAsStateWithLifecycle()
+    val cartUiState by cartViewModel.uiState.collectAsStateWithLifecycle()
     var quantity by remember { mutableIntStateOf(1) }
 
+    // Verificar si el item ya está en el carrito
+    val cartItem = cartViewModel.getCartItemByMenuId(menuItemId)
+    val isInCart = cartItem != null
+
     LaunchedEffect(menuItemId) {
-        viewModel.loadMenuItemDetails(menuItemId)
+        menuViewModel.loadMenuItemDetails(menuItemId)
+    }
+
+    // Manejar éxito al agregar al carrito
+    LaunchedEffect(cartUiState.successMessage) {
+        cartUiState.successMessage?.let {
+            // Mostrar mensaje y limpiar
+            cartViewModel.clearMessages()
+        }
     }
 
     when {
-        uiState.isLoading -> {
+        menuUiState.isLoading -> {
             LoadingDetailScreen(onNavigateBack = onNavigateBack)
         }
 
-        uiState.errorMessage != null -> {
+        menuUiState.errorMessage != null -> {
             ErrorDetailScreen(
-                message = uiState.errorMessage!!,
+                message = menuUiState.errorMessage!!,
                 onNavigateBack = onNavigateBack,
-                onRetry = { viewModel.loadMenuItemDetails(menuItemId) }
+                onRetry = { menuViewModel.loadMenuItemDetails(menuItemId) }
             )
         }
 
-        uiState.selectedMenuItem != null -> {
+        menuUiState.selectedMenuItem != null -> {
             MenuItemDetailContent(
-                menuItem = uiState.selectedMenuItem!!,
+                menuItem = menuUiState.selectedMenuItem!!,
                 quantity = quantity,
                 onQuantityChange = { quantity = it },
                 onNavigateBack = onNavigateBack,
                 onAddToCart = { onAddToCart(menuItemId, quantity) },
+                isInCart = isInCart,
+                cartQuantity = cartItem?.quantity ?: 0,
+                onUpdateCartQuantity = { newQuantity ->
+                    if (cartItem != null) {
+                        cartViewModel.updateItemQuantity(cartItem.id, newQuantity)
+                    }
+                },
+                onRemoveFromCart = {
+                    if (cartItem != null) {
+                        cartViewModel.removeItem(cartItem.id)
+                    }
+                },
+                isUpdating = cartUiState.isUpdating,
                 modifier = modifier
             )
         }
@@ -76,6 +104,11 @@ private fun MenuItemDetailContent(
     onQuantityChange: (Int) -> Unit,
     onNavigateBack: () -> Unit,
     onAddToCart: () -> Unit,
+    isInCart: Boolean,
+    cartQuantity: Int,
+    onUpdateCartQuantity: (Int) -> Unit,
+    onRemoveFromCart: () -> Unit,
+    isUpdating: Boolean,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -151,6 +184,23 @@ private fun MenuItemDetailContent(
                 color = MaterialTheme.colorScheme.primary
             )
 
+            // Estado en carrito si está agregado
+            if (isInCart) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                ) {
+                    Text(
+                        text = "Ya tienes $cartQuantity en tu carrito",
+                        modifier = Modifier.padding(12.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+
             // Descripción
             if (!menuItem.description.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(16.dp))
@@ -186,7 +236,7 @@ private fun MenuItemDetailContent(
             }
         }
 
-        // Sección inferior con cantidad y botón
+        // Sección inferior con cantidad y botones
         if (menuItem.available) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
@@ -196,69 +246,160 @@ private fun MenuItemDetailContent(
                 Column(
                     modifier = Modifier.padding(16.dp)
                 ) {
-                    // Selector de cantidad
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Cantidad",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-
+                    if (isInCart) {
+                        // Controles para item ya en carrito
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            FilledIconButton(
-                                onClick = {
-                                    if (quantity > 1) onQuantityChange(quantity - 1)
-                                },
-                                enabled = quantity > 1
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Remove,
-                                    contentDescription = "Disminuir cantidad"
-                                )
-                            }
-
                             Text(
-                                text = quantity.toString(),
-                                style = MaterialTheme.typography.titleLarge,
+                                text = "En carrito",
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
 
-                            FilledIconButton(
-                                onClick = { onQuantityChange(quantity + 1) }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = "Aumentar cantidad"
+                                FilledIconButton(
+                                    onClick = {
+                                        if (cartQuantity > 1) {
+                                            onUpdateCartQuantity(cartQuantity - 1)
+                                        } else {
+                                            onRemoveFromCart()
+                                        }
+                                    },
+                                    enabled = !isUpdating
+                                ) {
+                                    Icon(
+                                        imageVector = if (cartQuantity > 1) Icons.Default.Remove else Icons.Default.Remove,
+                                        contentDescription = if (cartQuantity > 1) "Disminuir cantidad" else "Eliminar del carrito"
+                                    )
+                                }
+
+                                Text(
+                                    text = cartQuantity.toString(),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold
                                 )
+
+                                FilledIconButton(
+                                    onClick = { onUpdateCartQuantity(cartQuantity + 1) },
+                                    enabled = !isUpdating
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "Aumentar cantidad"
+                                    )
+                                }
                             }
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    // Botón agregar al carrito
-                    Button(
-                        onClick = onAddToCart,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
+                        // Botón para agregar más cantidad
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = onRemoveFromCart,
+                                modifier = Modifier.weight(1f),
+                                enabled = !isUpdating
+                            ) {
+                                Text("Eliminar")
+                            }
+
+                            Button(
+                                onClick = onAddToCart,
+                                modifier = Modifier.weight(1f),
+                                enabled = !isUpdating
+                            ) {
+                                if (isUpdating) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Text("Agregar más")
+                                }
+                            }
+                        }
+                    } else {
+                        // Controles para item no en carrito
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null
+                            Text(
+                                text = "Cantidad",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
                             )
-                            Text("Agregar al carrito")
-                            Text("• ${formatPrice(menuItem.price * quantity)}")
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                FilledIconButton(
+                                    onClick = {
+                                        if (quantity > 1) onQuantityChange(quantity - 1)
+                                    },
+                                    enabled = quantity > 1
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Remove,
+                                        contentDescription = "Disminuir cantidad"
+                                    )
+                                }
+
+                                Text(
+                                    text = quantity.toString(),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                FilledIconButton(
+                                    onClick = { onQuantityChange(quantity + 1) }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "Aumentar cantidad"
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Botón agregar al carrito
+                        Button(
+                            onClick = onAddToCart,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = !isUpdating
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (isUpdating) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = null
+                                    )
+                                }
+                                Text("Agregar al carrito")
+                                Text("• ${formatPrice(menuItem.price * quantity)}")
+                            }
                         }
                     }
                 }

@@ -1,3 +1,4 @@
+// network/NetworkModule.kt
 package com.example.restaurant_app.network
 
 import com.example.restaurant_app.BuildConfig
@@ -28,23 +29,21 @@ object NetworkModule {
     fun provideJson(): Json {
         return Json {
             ignoreUnknownKeys = true
-            isLenient = true
-            encodeDefaults = false
+            coerceInputValues = true
+            encodeDefaults = true
         }
     }
 
     @Provides
     @Singleton
     fun provideHttpLoggingInterceptor(): HttpLoggingInterceptor {
-        val interceptor = HttpLoggingInterceptor()
-        interceptor.setLevel(
-            if (BuildConfig.DEBUG) {
+        return HttpLoggingInterceptor().apply {
+            level = if (BuildConfig.DEBUG) {
                 HttpLoggingInterceptor.Level.BODY
             } else {
                 HttpLoggingInterceptor.Level.NONE
             }
-        )
-        return interceptor
+        }
     }
 
     @Provides
@@ -60,8 +59,8 @@ object NetworkModule {
         authInterceptor: AuthInterceptor
     ): OkHttpClient {
         return OkHttpClient.Builder()
-            .addInterceptor(loggingInterceptor)
             .addInterceptor(authInterceptor)
+            .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
@@ -74,12 +73,11 @@ object NetworkModule {
         okHttpClient: OkHttpClient,
         json: Json
     ): Retrofit {
+        val contentType = "application/json".toMediaType()
         return Retrofit.Builder()
             .baseUrl(BuildConfig.BASE_URL + BuildConfig.API_VERSION)
             .client(okHttpClient)
-            .addConverterFactory(
-                json.asConverterFactory("application/json".toMediaType())
-            )
+            .addConverterFactory(json.asConverterFactory(contentType))
             .build()
     }
 
