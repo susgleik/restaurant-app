@@ -1,13 +1,15 @@
 package com.example.restaurant_app.data.models
 
+import android.annotation.SuppressLint
 import kotlinx.serialization.Serializable
-
+@SuppressLint("UnsafeOptInUsageError")
 @Serializable
 data class LoginRequest(
     val email: String,
     val password: String
 )
 
+@SuppressLint("UnsafeOptInUsageError")
 @Serializable
 data class RegisterRequest(
     val username: String,
@@ -15,6 +17,7 @@ data class RegisterRequest(
     val password: String
 )
 
+@SuppressLint("UnsafeOptInUsageError")
 @Serializable
 data class LoginResponse(
     val user: User,
@@ -22,6 +25,7 @@ data class LoginResponse(
     val token_type: String = "bearer"
 )
 
+@SuppressLint("UnsafeOptInUsageError")
 @Serializable
 data class User(
     val id: String,
@@ -33,11 +37,13 @@ data class User(
 )
 
 // Si necesitas estos modelos adicionales para otras funciones
+@SuppressLint("UnsafeOptInUsageError")
 @Serializable
 data class RefreshTokenRequest(
     val refresh_token: String
 )
 
+@SuppressLint("UnsafeOptInUsageError")
 @Serializable
 data class TokenResponse(
     val access_token: String,

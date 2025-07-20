@@ -33,11 +33,21 @@ fun RegisterScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
 
-    val isFormValid = username.isNotBlank() &&
-            email.isNotBlank() &&
-            password.isNotBlank() &&
-            confirmPassword.isNotBlank() &&
-            password == confirmPassword
+    // Validaciones
+    val isUsernameValid = username.isNotBlank() && username.matches(Regex("^[a-zA-Z0-9_-]+$"))
+    val isEmailValid = email.isNotBlank() && android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
+    val isPasswordValid = password.isNotBlank() && password.length >= 6
+    val doPasswordsMatch = password == confirmPassword && confirmPassword.isNotBlank()
+
+    val isFormValid = isUsernameValid && isEmailValid && isPasswordValid && doPasswordsMatch
+
+    // Remover este LaunchedEffect ya que se maneja en AuthNavigation
+    // LaunchedEffect(authUiState.isRegisterSuccessful) {
+    //     if (authUiState.isRegisterSuccessful) {
+    //         onRegisterSuccess()
+    //         authViewModel.clearRegisterSuccess()
+    //     }
+    // }
 
     Column(
         modifier = modifier
@@ -72,12 +82,19 @@ fun RegisterScreen(
                     contentDescription = "Usuario"
                 )
             },
+            supportingText = {
+                Text(
+                    text = "Solo letras, números, guiones y guiones bajos",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
-            enabled = !authUiState.isLoading
+            enabled = !authUiState.isLoading,
+            isError = username.isNotBlank() && !isUsernameValid
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Campo de email
         OutlinedTextField(
@@ -93,10 +110,22 @@ fun RegisterScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
-            enabled = !authUiState.isLoading
+            enabled = !authUiState.isLoading,
+            isError = email.isNotBlank() && !isEmailValid
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        if (email.isNotBlank() && !isEmailValid) {
+            Text(
+                text = "Ingresa un email válido",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, top = 4.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Campo de contraseña
         OutlinedTextField(
@@ -117,14 +146,21 @@ fun RegisterScreen(
                     )
                 }
             },
+            supportingText = {
+                Text(
+                    text = "Mínimo 6 caracteres",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            },
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
-            enabled = !authUiState.isLoading
+            enabled = !authUiState.isLoading,
+            isError = password.isNotBlank() && !isPasswordValid
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Campo de confirmar contraseña
         OutlinedTextField(
@@ -150,15 +186,17 @@ fun RegisterScreen(
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             enabled = !authUiState.isLoading,
-            isError = confirmPassword.isNotBlank() && password != confirmPassword
+            isError = confirmPassword.isNotBlank() && !doPasswordsMatch
         )
 
-        if (confirmPassword.isNotBlank() && password != confirmPassword) {
+        if (confirmPassword.isNotBlank() && !doPasswordsMatch) {
             Text(
                 text = "Las contraseñas no coinciden",
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, top = 4.dp)
             )
         }
 

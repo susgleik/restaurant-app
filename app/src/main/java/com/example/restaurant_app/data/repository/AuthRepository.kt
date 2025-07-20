@@ -1,5 +1,6 @@
 package com.example.restaurant_app.data.repository
 
+import android.annotation.SuppressLint
 import com.example.restaurant_app.data.local.TokenManager
 import com.example.restaurant_app.data.models.*
 import com.example.restaurant_app.data.remote.AuthApiService
@@ -8,12 +9,28 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 sealed class AuthResult<T> {
     data class Success<T>(val data: T) : AuthResult<T>()
     data class Error<T>(val message: String) : AuthResult<T>()
     data class Loading<T>(val message: String = "Cargando...") : AuthResult<T>()
 }
+
+@SuppressLint("UnsafeOptInUsageError")
+@Serializable
+data class ValidationErrorDetail(
+    val type: String,
+    val loc: List<String>,
+    val msg: String,
+    val input: String? = null
+)
+@SuppressLint("UnsafeOptInUsageError")
+@Serializable
+data class ValidationErrorResponse(
+    val detail: List<ValidationErrorDetail>
+)
 
 @Singleton
 class AuthRepository @Inject constructor(
@@ -52,6 +69,22 @@ class AuthRepository @Inject constructor(
                 val errorMessage = when (response.code()) {
                     401 -> "Credenciales incorrectas"
                     404 -> "Usuario no encontrado"
+                    422 -> {
+                        // Intentar parsear errores de validación
+                        try {
+                            val errorBody = response.errorBody()?.string()
+                            if (!errorBody.isNullOrBlank()) {
+                                val json = Json { ignoreUnknownKeys = true }
+                                val validationError = json.decodeFromString<ValidationErrorResponse>(errorBody)
+                                val messages = validationError.detail.map { it.msg }
+                                "Error de validación: ${messages.joinToString(", ")}"
+                            } else {
+                                "Datos inválidos"
+                            }
+                        } catch (e: Exception) {
+                            "Datos inválidos"
+                        }
+                    }
                     else -> "Error al iniciar sesión: ${response.message()}"
                 }
                 emit(AuthResult.Error(errorMessage))
@@ -76,6 +109,44 @@ class AuthRepository @Inject constructor(
                 val errorMessage = when (response.code()) {
                     400 -> "Datos inválidos"
                     409 -> "El email ya está registrado"
+                    422 -> {
+                        // Intentar parsear errores de validación específicos
+                        try {
+                            val errorBody = response.errorBody()?.string()
+                            if (!errorBody.isNullOrBlank()) {
+                                val json = Json { ignoreUnknownKeys = true }
+                                val validationError = json.decodeFromString<ValidationErrorResponse>(errorBody)
+
+                                val messages = validationError.detail.map { detail ->
+                                    when {
+                                        detail.loc.contains("username") -> {
+                                            if (detail.msg.contains("solo puede contener")) {
+                                                "El nombre de usuario solo puede contener letras, números, guiones y guiones bajos"
+                                            } else {
+                                                "Error en el nombre de usuario: ${detail.msg}"
+                                            }
+                                        }
+                                        detail.loc.contains("email") -> {
+                                            if (detail.msg.contains("email address")) {
+                                                "El formato del email no es válido"
+                                            } else {
+                                                "Error en el email: ${detail.msg}"
+                                            }
+                                        }
+                                        detail.loc.contains("password") -> {
+                                            "Error en la contraseña: ${detail.msg}"
+                                        }
+                                        else -> detail.msg
+                                    }
+                                }
+                                messages.joinToString("\n")
+                            } else {
+                                "Error de validación en los datos"
+                            }
+                        } catch (e: Exception) {
+                            "Error de validación en los datos"
+                        }
+                    }
                     else -> "Error al registrar: ${response.message()}"
                 }
                 emit(AuthResult.Error(errorMessage))
@@ -109,6 +180,7 @@ class AuthRepository @Inject constructor(
             emit(AuthResult.Error("Error de conexión: ${e.message}"))
         }
     }
+
 
     suspend fun logout() {
         try {
