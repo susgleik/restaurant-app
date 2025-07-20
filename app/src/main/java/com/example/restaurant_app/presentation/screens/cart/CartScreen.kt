@@ -42,10 +42,14 @@ fun CartScreen(
     var showOrderDialog by remember { mutableStateOf(false) }
     var orderNotes by remember { mutableStateOf("") }
 
+    // Refrescar carrito cuando la pantalla se hace visible
+    LaunchedEffect(Unit) {
+        cartViewModel.loadCart()
+    }
+
     // Manejar efectos secundarios
     LaunchedEffect(cartUiState.successMessage) {
         cartUiState.successMessage?.let {
-            // Mostrar snackbar o toast si es necesario
             cartViewModel.clearMessages()
         }
     }

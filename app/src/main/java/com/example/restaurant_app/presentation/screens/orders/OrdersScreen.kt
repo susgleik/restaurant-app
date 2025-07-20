@@ -69,20 +69,38 @@ fun OrdersScreen(
         )
 
         // Tab Row
-        TabRow(selectedTabIndex = selectedTab) {
+        TabRow(
+            selectedTabIndex = selectedTab,
+            modifier = Modifier.fillMaxWidth()
+        ) {
             tabs.forEachIndexed { index, title ->
                 Tab(
                     selected = selectedTab == index,
                     onClick = { selectedTab = index },
+                    modifier = Modifier.fillMaxWidth(),
                     text = {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.Center
                         ) {
-                            Text(title)
+                            Text(
+                                text = title,
+                                style = MaterialTheme.typography.labelLarge
+                            )
                             if (index == 0 && uiState.activeOrders.isNotEmpty()) {
-                                Badge {
-                                    Text(uiState.activeOrders.size.toString())
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Card(
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.primary
+                                    ),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(
+                                        text = uiState.activeOrders.size.toString(),
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onPrimary
+                                    )
                                 }
                             }
                         }
@@ -162,19 +180,20 @@ private fun OrdersList(
     showCancelButton: Boolean
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(
             items = orders,
-            key = { it.id }
+            key = { order -> order.id }
         ) { order ->
             OrderCard(
                 order = order,
                 onClick = { onOrderClick(order.id) },
-                onCancel = if (showCancelButton && order.canBeCancelled) {
-                    { onCancelOrder?.invoke(order) }
+                onCancel = if (showCancelButton && order.canBeCancelled && onCancelOrder != null) {
+                    { onCancelOrder(order) }
                 } else null
             )
         }
@@ -188,8 +207,7 @@ private fun OrderCard(
     onCancel: (() -> Unit)?
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         onClick = onClick,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -250,10 +268,8 @@ private fun OrderCard(
             Spacer(modifier = Modifier.height(12.dp))
 
             // Total y acciones
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
                     text = "Total: ${formatPrice(order.totalAmount)}",
@@ -262,28 +278,32 @@ private fun OrderCard(
                     color = MaterialTheme.colorScheme.primary
                 )
 
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    if (onCancel != null) {
-                        FilledTonalButton(
-                            onClick = onCancel,
-                            colors = ButtonDefaults.filledTonalButtonColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Cancel,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Cancelar")
-                        }
-                    }
+                if (onCancel != null || true) {
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    FilledTonalButton(onClick = onClick) {
-                        Text("Ver detalles")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (onCancel != null) {
+                            Button(
+                                onClick = onCancel,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                ),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Cancelar", style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+
+                        Button(
+                            onClick = onClick,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Ver detalles", style = MaterialTheme.typography.labelMedium)
+                        }
                     }
                 }
             }
@@ -314,56 +334,43 @@ private fun OrderCard(
 
 @Composable
 fun OrderStatusChip(status: OrderStatus) {
-    val (color, icon, text) = when (status) {
-        OrderStatus.PENDING -> Triple(
-            MaterialTheme.colorScheme.tertiary,
-            Icons.Default.Schedule,
+    val (color, text) = when (status) {
+        OrderStatus.PENDING -> Pair(
+            Color(0xFF9C27B0),
             "Pendiente"
         )
-        OrderStatus.IN_PREPARATION -> Triple(
-            MaterialTheme.colorScheme.primary,
-            Icons.Default.Restaurant,
+        OrderStatus.IN_PREPARATION -> Pair(
+            Color(0xFF2196F3),
             "En preparación"
         )
-        OrderStatus.READY -> Triple(
+        OrderStatus.READY -> Pair(
             Color(0xFF4CAF50),
-            Icons.Default.CheckCircle,
             "Listo"
         )
-        OrderStatus.DELIVERED -> Triple(
-            Color(0xFF2196F3),
-            Icons.Default.DeliveryDining,
+        OrderStatus.DELIVERED -> Pair(
+            Color(0xFF607D8B),
             "Entregado"
         )
-        OrderStatus.CANCELLED -> Triple(
-            MaterialTheme.colorScheme.error,
-            Icons.Default.Cancel,
+        OrderStatus.CANCELLED -> Pair(
+            Color(0xFFF44336),
             "Cancelado"
         )
     }
 
-    Surface(
-        color = color.copy(alpha = 0.1f),
-        shape = RoundedCornerShape(16.dp)
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = color.copy(alpha = 0.1f)
+        ),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.wrapContentSize()
     ) {
-        Row(
+        Text(
+            text = text,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = color,
-                modifier = Modifier.size(16.dp)
-            )
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelMedium,
-                color = color,
-                fontWeight = FontWeight.Medium
-            )
-        }
+            style = MaterialTheme.typography.labelMedium,
+            color = color,
+            fontWeight = FontWeight.Medium
+        )
     }
 }
 

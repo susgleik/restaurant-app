@@ -33,6 +33,9 @@ class CartViewModel @Inject constructor(
     private val _cartSummary = MutableStateFlow<CartSummary?>(null)
     val cartSummary: StateFlow<CartSummary?> = _cartSummary.asStateFlow()
 
+    // Flag para evitar múltiples cargas simultáneas
+    private var isLoadingCart = false
+
     init {
         loadCart()
     }
@@ -50,6 +53,7 @@ class CartViewModel @Inject constructor(
                         isLoading = false,
                         cart = cartList
                     )
+                    // Actualizar resumen después de cargar
                     updateCartSummary()
                 },
                 onFailure = { error ->
@@ -75,7 +79,8 @@ class CartViewModel @Inject constructor(
                         isUpdating = false,
                         successMessage = "Producto agregado al carrito"
                     )
-                    loadCart() // Recargar carrito
+                    loadCart() // Recargar carrito después de agregar
+                    updateCartSummary() // Actualizar resumen
                 },
                 onFailure = { error ->
                     _uiState.value = _uiState.value.copy(
@@ -103,6 +108,7 @@ class CartViewModel @Inject constructor(
                 onSuccess = {
                     _uiState.value = _uiState.value.copy(isUpdating = false)
                     loadCart() // Recargar carrito
+                    updateCartSummary() // Actualizar resumen
                 },
                 onFailure = { error ->
                     _uiState.value = _uiState.value.copy(
@@ -125,6 +131,7 @@ class CartViewModel @Inject constructor(
                 onSuccess = {
                     _uiState.value = _uiState.value.copy(isUpdating = false)
                     loadCart() // Recargar carrito
+                    updateCartSummary() // Actualizar resumen
                 },
                 onFailure = { error ->
                     _uiState.value = _uiState.value.copy(
@@ -147,6 +154,7 @@ class CartViewModel @Inject constructor(
                 onSuccess = {
                     _uiState.value = _uiState.value.copy(isUpdating = false)
                     loadCart() // Recargar carrito
+                    updateCartSummary() // Actualizar resumen
                 },
                 onFailure = { error ->
                     _uiState.value = _uiState.value.copy(
@@ -172,6 +180,7 @@ class CartViewModel @Inject constructor(
                         successMessage = "Producto eliminado del carrito"
                     )
                     loadCart() // Recargar carrito
+                    updateCartSummary() // Actualizar resumen
                 },
                 onFailure = { error ->
                     _uiState.value = _uiState.value.copy(
@@ -197,6 +206,7 @@ class CartViewModel @Inject constructor(
                         successMessage = "Carrito vaciado"
                     )
                     loadCart() // Recargar carrito
+                    updateCartSummary() // Actualizar resumen
                 },
                 onFailure = { error ->
                     _uiState.value = _uiState.value.copy(
@@ -234,14 +244,16 @@ class CartViewModel @Inject constructor(
      */
     private fun updateCartSummary() {
         viewModelScope.launch {
-            cartRepository.getCartSummary().fold(
-                onSuccess = { summary ->
-                    _cartSummary.value = summary
-                },
-                onFailure = {
-                    _cartSummary.value = null
-                }
-            )
+            // Usar los datos actuales del carrito en lugar de hacer otra llamada al repositorio
+            _uiState.value.cart?.let { cart ->
+                val summary = CartSummary(
+                    itemCount = cart.total_quantity,
+                    totalAmount = cart.totalAmount,
+                    itemsCount = cart.total_items,
+                    isEmpty = cart.is_empty
+                )
+                _cartSummary.value = summary
+            }
         }
     }
 

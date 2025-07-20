@@ -52,7 +52,7 @@ fun MenuItemDetailScreen(
     // Manejar éxito al agregar al carrito
     LaunchedEffect(cartUiState.successMessage) {
         cartUiState.successMessage?.let {
-            // Mostrar mensaje y limpiar
+            // Limpiar mensaje sin recargar carrito extra
             cartViewModel.clearMessages()
         }
     }
