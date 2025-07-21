@@ -1,8 +1,10 @@
 // data/models/Category.kt - Solo modelos de categorías
 package com.example.restaurant_app.data.models
 
+import android.annotation.SuppressLint
 import kotlinx.serialization.Serializable
 
+@SuppressLint("UnsafeOptInUsageError")
 @Serializable
 data class Category(
     val id: String,
@@ -12,12 +14,14 @@ data class Category(
     val created_at: String
 )
 
+@SuppressLint("UnsafeOptInUsageError")
 @Serializable
 data class CategoryList(
     val categories: List<Category>,
     val total: Int
 )
 
+@SuppressLint("UnsafeOptInUsageError")
 @Serializable
 data class CategoryCreate(
     val name: String,
@@ -25,6 +29,7 @@ data class CategoryCreate(
     val active: Boolean = true
 )
 
+@SuppressLint("UnsafeOptInUsageError")
 @Serializable
 data class CategoryUpdate(
     val name: String? = null,

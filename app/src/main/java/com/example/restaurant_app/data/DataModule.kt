@@ -62,9 +62,9 @@ object DataModule {
     @Provides
     @Singleton
     fun provideCategoryRepository(
-        menuApiService: MenuApiService
+        categoryApiService: CategoryApiService
     ): CategoryRepository {
-        return CategoryRepository(menuApiService)
+        return CategoryRepository(categoryApiService)
     }
 
     @Provides

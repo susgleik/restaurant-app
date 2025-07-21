@@ -1,16 +1,19 @@
-// data/repository/CategoryRepository.kt - Versión final corregida
+// data/repository/CategoryRepository.kt
 package com.example.restaurant_app.data.repository
 
 import com.example.restaurant_app.data.models.*
-import com.example.restaurant_app.data.remote.MenuApiService
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import com.example.restaurant_app.data.remote.CategoryApiService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import com.example.restaurant_app.data.repository.MenuResult
 
 @Singleton
 class CategoryRepository @Inject constructor(
-    private val menuApiService: MenuApiService // Usar MenuApiService ya que tiene los endpoints de categories
+    private val categoryApiService: CategoryApiService
 ) {
 
     fun getCategories(
@@ -18,122 +21,110 @@ class CategoryRepository @Inject constructor(
         skip: Int = 0,
         limit: Int = 50
     ): Flow<MenuResult<CategoryList>> = flow {
+        emit(MenuResult.Loading("Cargando categorías..."))
         try {
-            emit(MenuResult.Loading("Cargando categorías..."))
-
-            val response = menuApiService.getCategories(activeOnly, skip, limit)
-
+            val response = categoryApiService.getCategories(activeOnly, skip, limit)
             if (response.isSuccessful) {
-                response.body()?.let { categoryList ->
-                    emit(MenuResult.Success(categoryList))
+                response.body()?.let {
+                    emit(MenuResult.Success(it))
                 } ?: emit(MenuResult.Error("Respuesta vacía del servidor"))
             } else {
-                val errorMessage = when (response.code()) {
-                    401 -> "No tienes permisos para ver las categorías."
-                    500 -> "Error del servidor. Intenta más tarde."
-                    else -> "Error al cargar categorías: ${response.message()}"
+                val msg = when (response.code()) {
+                    404 -> "No se encontraron categorías"
+                    500 -> "Error interno del servidor"
+                    else -> "Error ${response.code()}: ${response.message()}"
                 }
-                emit(MenuResult.Error(errorMessage))
+                emit(MenuResult.Error(msg))
             }
         } catch (e: Exception) {
-            emit(MenuResult.Error("Error de conexión: ${e.message}"))
+            emit(MenuResult.Error(e.message ?: "Error desconocido"))
         }
     }
 
-    fun getCategory(id: String): Flow<MenuResult<Category>> = flow {
+    suspend fun getCategory(id: String): Result<Category> = withContext(Dispatchers.IO) {
         try {
-            emit(MenuResult.Loading("Cargando categoría..."))
-
-            val response = menuApiService.getCategory(id)
+            val response = categoryApiService.getCategory(id)
 
             if (response.isSuccessful) {
                 response.body()?.let { category ->
-                    emit(MenuResult.Success(category))
-                } ?: emit(MenuResult.Error("Categoría no encontrada"))
+                    Result.success(category)
+                } ?: Result.failure(Exception("Categoría no encontrada"))
             } else {
                 val errorMessage = when (response.code()) {
-                    404 -> "La categoría no existe."
-                    401 -> "No tienes permisos para ver esta categoría."
-                    else -> "Error al cargar categoría: ${response.message()}"
+                    404 -> "Categoría no encontrada"
+                    400 -> "ID de categoría inválido"
+                    500 -> "Error interno del servidor"
+                    else -> "Error ${response.code()}: ${response.message()}"
                 }
-                emit(MenuResult.Error(errorMessage))
+                Result.failure(Exception(errorMessage))
             }
         } catch (e: Exception) {
-            emit(MenuResult.Error("Error de conexión: ${e.message}"))
+            Result.failure(e)
         }
     }
 
-    fun createCategory(category: CategoryCreate): Flow<MenuResult<Category>> = flow {
+    fun createCategory(categoryCreate: CategoryCreate): Flow<MenuResult<Category>> = flow {
+        emit(MenuResult.Loading("creando categorias..."))
         try {
-            emit(MenuResult.Loading("Creando categoría..."))
-
-            val response = menuApiService.createCategory(category)
-
+            val response = categoryApiService.createCategory(categoryCreate)
             if (response.isSuccessful) {
-                response.body()?.let { newCategory ->
-                    emit(MenuResult.Success(newCategory))
-                } ?: emit(MenuResult.Error("No se pudo crear la categoría"))
+                response.body()?.let {
+                    emit(MenuResult.Success(it))
+                } ?: emit(MenuResult.Error("Error al crear la categoría"))
             } else {
-                val errorMessage = when (response.code()) {
-                    400 -> "Datos inválidos. Verifica la información ingresada."
-                    401 -> "No tienes permisos para crear categorías."
-                    409 -> "Ya existe una categoría con ese nombre."
-                    422 -> "Los datos enviados no son válidos."
-                    else -> "Error al crear categoría: ${response.message()}"
+                val msg = when (response.code()) {
+                    400 -> "Datos inválidos"
+                    409 -> "Ya existe una categoría con ese nombre"
+                    401 -> "No tienes permisos"
+                    else -> "Error ${response.code()}: ${response.message()}"
                 }
-                emit(MenuResult.Error(errorMessage))
+                emit(MenuResult.Error(msg))
             }
         } catch (e: Exception) {
-            emit(MenuResult.Error("Error de conexión: ${e.message}"))
+            emit(MenuResult.Error(e.message ?: "Error desconocido"))
         }
     }
 
-    fun updateCategory(id: String, category: CategoryUpdate): Flow<MenuResult<Category>> = flow {
+    fun updateCategory(id: String, categoryUpdate: CategoryUpdate): Flow<MenuResult<Category>> = flow {
+        emit(MenuResult.Loading("actualizando categorias..."))
         try {
-            emit(MenuResult.Loading("Actualizando categoría..."))
-
-            val response = menuApiService.updateCategory(id, category)
-
+            val response = categoryApiService.updateCategory(id, categoryUpdate)
             if (response.isSuccessful) {
-                response.body()?.let { updatedCategory ->
-                    emit(MenuResult.Success(updatedCategory))
-                } ?: emit(MenuResult.Error("No se pudo actualizar la categoría"))
+                response.body()?.let {
+                    emit(MenuResult.Success(it))
+                } ?: emit(MenuResult.Error("Error al actualizar la categoría"))
             } else {
-                val errorMessage = when (response.code()) {
-                    400 -> "Datos inválidos. Verifica la información ingresada."
-                    401 -> "No tienes permisos para modificar categorías."
-                    404 -> "La categoría no existe."
-                    409 -> "Ya existe una categoría con ese nombre."
-                    422 -> "Los datos enviados no son válidos."
-                    else -> "Error al actualizar categoría: ${response.message()}"
+                val msg = when (response.code()) {
+                    400 -> "Datos inválidos"
+                    404 -> "No encontrada"
+                    409 -> "Nombre duplicado"
+                    401 -> "Sin permisos"
+                    else -> "Error ${response.code()}: ${response.message()}"
                 }
-                emit(MenuResult.Error(errorMessage))
+                emit(MenuResult.Error(msg))
             }
         } catch (e: Exception) {
-            emit(MenuResult.Error("Error de conexión: ${e.message}"))
+            emit(MenuResult.Error(e.message ?: "Error desconocido"))
         }
     }
 
     fun deleteCategory(id: String): Flow<MenuResult<Unit>> = flow {
+        emit(MenuResult.Loading("eliminando categorias..."))
         try {
-            emit(MenuResult.Loading("Eliminando categoría..."))
-
-            val response = menuApiService.deleteCategory(id)
-
+            val response = categoryApiService.deleteCategory(id)
             if (response.isSuccessful) {
                 emit(MenuResult.Success(Unit))
             } else {
-                val errorMessage = when (response.code()) {
-                    400 -> "No se puede eliminar esta categoría porque tiene productos asociados."
-                    401 -> "No tienes permisos para eliminar categorías."
-                    404 -> "La categoría no existe."
-                    422 -> "La categoría está en uso y no puede ser eliminada."
-                    else -> "Error al eliminar categoría: ${response.message()}"
+                val msg = when (response.code()) {
+                    400 -> "No se puede eliminar porque tiene productos"
+                    404 -> "No encontrada"
+                    401 -> "Sin permisos"
+                    else -> "Error ${response.code()}: ${response.message()}"
                 }
-                emit(MenuResult.Error(errorMessage))
+                emit(MenuResult.Error(msg))
             }
         } catch (e: Exception) {
-            emit(MenuResult.Error("Error de conexión: ${e.message}"))
+            emit(MenuResult.Error(e.message ?: "Error desconocido"))
         }
     }
 }

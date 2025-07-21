@@ -1,11 +1,14 @@
-// presentation/viewmodels/AdminMenuViewModel.kt - Versión final corregida
+// presentation/viewmodels/AdminMenuViewModel.kt - Con import correcto de MenuResult
 package com.example.restaurant_app.presentation.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.restaurant_app.data.models.*
+import com.example.restaurant_app.data.models.Category
+import com.example.restaurant_app.data.models.MenuItem
+import com.example.restaurant_app.data.models.MenuItemCreate
+import com.example.restaurant_app.data.models.MenuItemUpdate
+import com.example.restaurant_app.data.repository.MenuResult
 import com.example.restaurant_app.data.repository.MenuRepository
-import com.example.restaurant_app.data.repository.CategoryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -33,8 +36,7 @@ enum class MenuDialogType {
 
 @HiltViewModel
 class AdminMenuViewModel @Inject constructor(
-    private val menuRepository: MenuRepository,
-    private val categoryRepository: CategoryRepository
+    private val menuRepository: MenuRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AdminMenuUiState())
@@ -54,7 +56,7 @@ class AdminMenuViewModel @Inject constructor(
 
     private fun loadCategories() {
         viewModelScope.launch {
-            categoryRepository.getCategories().collect { result ->
+            menuRepository.getCategories().collect { result ->
                 when (result) {
                     is MenuResult.Success -> {
                         val categoryList = result.data

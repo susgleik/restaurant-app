@@ -16,9 +16,11 @@ import com.example.restaurant_app.presentation.navigation.RestaurantNavigation
 import com.example.restaurant_app.ui.theme.RestaurantappTheme
 import dagger.hilt.android.AndroidEntryPoint
 
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
             RestaurantappTheme {

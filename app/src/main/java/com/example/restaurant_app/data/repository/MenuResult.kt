@@ -1,4 +1,5 @@
-package com.example.restaurant_app.data.models
+// data/models/MenuResult.kt - Usando la estructura original con algunas mejoras
+package com.example.restaurant_app.data.repository
 
 /**
  * Clase sellada para manejar diferentes estados de las operaciones del menú
@@ -14,12 +15,12 @@ sealed class MenuResult<out T> {
     /**
      * Estado de error con mensaje descriptivo
      */
-    data class Error<T>(val message: String) : MenuResult<T>()
+    data class Error(val message: String) : MenuResult<Nothing>()
 
     /**
      * Estado de carga con mensaje opcional
      */
-    data class Loading<T>(val message: String = "Cargando...") : MenuResult<T>()
+    data class Loading(val message: String = "Cargando...") : MenuResult<Nothing>()
 }
 
 /**
@@ -51,4 +52,22 @@ fun <T> MenuResult<T>.getDataOrNull(): T? = when (this) {
 fun <T> MenuResult<T>.getErrorOrNull(): String? = when (this) {
     is MenuResult.Error -> message
     else -> null
+}
+
+/**
+ * Extensions para facilitar el uso con collect
+ */
+inline fun <T> MenuResult<T>.onSuccess(action: (T) -> Unit): MenuResult<T> {
+    if (this is MenuResult.Success) action(data)
+    return this
+}
+
+inline fun <T> MenuResult<T>.onError(action: (String) -> Unit): MenuResult<T> {
+    if (this is MenuResult.Error) action(message)
+    return this
+}
+
+inline fun <T> MenuResult<T>.onLoading(action: (String) -> Unit): MenuResult<T> {
+    if (this is MenuResult.Loading) action(message)
+    return this
 }

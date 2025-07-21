@@ -1,14 +1,16 @@
-// presentation/viewmodels/AdminCategoryViewModel.kt - Versión final corregida
+// presentation/viewmodels/AdminCategoryViewModel.kt - Compatible con MenuResult
 package com.example.restaurant_app.presentation.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.restaurant_app.data.models.*
 import com.example.restaurant_app.data.repository.CategoryRepository
+import com.example.restaurant_app.data.repository.MenuResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
 
 data class CategoryUiState(
     val categories: List<Category> = emptyList(),

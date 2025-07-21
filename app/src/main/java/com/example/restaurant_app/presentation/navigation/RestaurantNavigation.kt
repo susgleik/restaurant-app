@@ -1,5 +1,7 @@
 package com.example.restaurant_app.presentation.navigation
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -8,6 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import com.example.restaurant_app.presentation.viewmodels.AuthViewModel
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun RestaurantNavigation(
     modifier: Modifier = Modifier,

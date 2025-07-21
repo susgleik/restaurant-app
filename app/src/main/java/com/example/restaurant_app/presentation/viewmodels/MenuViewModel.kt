@@ -8,6 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.example.restaurant_app.data.repository.MenuResult
 
 data class MenuUiState(
     val categories: List<Category> = emptyList(),

@@ -1,4 +1,4 @@
-// presentation/screens/admin/AdminMainScreen.kt - Versión básica para empezar
+// presentation/screens/admin/AdminMainScreen.kt - Versión completa con gestión de menú y categorías
 package com.example.restaurant_app.presentation.screens.admin
 
 import android.os.Build
@@ -31,8 +31,9 @@ fun AdminMainScreen(
     val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
-    // Definir las pestañas para admin
+    // Definir las pestañas para admin con categorías y productos separados
     val adminTabs = listOf(
+        AdminTab.CATEGORIES,
         AdminTab.MENU,
         AdminTab.ORDERS,
         AdminTab.PROFILE
@@ -51,7 +52,8 @@ fun AdminMainScreen(
             title = {
                 Text(
                     text = when (adminTabs[pagerState.currentPage]) {
-                        AdminTab.MENU -> "Gestión del Menú"
+                        AdminTab.CATEGORIES -> "Gestión de Categorías"
+                        AdminTab.MENU -> "Gestión de Productos"
                         AdminTab.ORDERS -> "Gestión de Pedidos"
                         AdminTab.PROFILE -> "Perfil del Staff"
                     }
@@ -61,7 +63,8 @@ fun AdminMainScreen(
                 // Mostrar info del staff
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(end = 8.dp)
                 ) {
                     Column(
                         horizontalAlignment = Alignment.End
@@ -70,11 +73,17 @@ fun AdminMainScreen(
                             text = authUiState.username ?: "Staff",
                             style = MaterialTheme.typography.bodySmall
                         )
-                        Text(
-                            text = "ADMIN STAFF",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = "ADMIN STAFF",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+                        }
                     }
                     IconButton(onClick = onLogout) {
                         Icon(
@@ -98,7 +107,12 @@ fun AdminMainScreen(
                             pagerState.animateScrollToPage(index)
                         }
                     },
-                    text = { Text(tab.title) },
+                    text = {
+                        Text(
+                            text = tab.title,
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    },
                     icon = {
                         Icon(
                             imageVector = tab.icon,
@@ -115,9 +129,15 @@ fun AdminMainScreen(
             modifier = Modifier.fillMaxSize()
         ) { page ->
             when (adminTabs[page]) {
+                AdminTab.CATEGORIES -> {
+                    AdminCategoriesScreen(
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
                 AdminTab.MENU -> {
-                    // TODO: Implementar gestión del menú
-                    AdminMenuPlaceholder()
+                    AdminMenuScreen(
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
                 AdminTab.ORDERS -> {
                     // TODO: Implementar gestión de pedidos
@@ -134,50 +154,7 @@ fun AdminMainScreen(
     }
 }
 
-// Placeholder temporal para el menú
-@Composable
-private fun AdminMenuPlaceholder() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            imageVector = Icons.Default.RestaurantMenu,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Gestión del Menú",
-            style = MaterialTheme.typography.headlineMedium
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Aquí podrás gestionar productos y categorías del menú",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            )
-        ) {
-            Text(
-                text = "🎉 ¡Funcionalidad de admin activada!",
-                modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        }
-    }
-}
-
-// Placeholder temporal para pedidos
+// Placeholder temporal para pedidos (a implementar más adelante)
 @Composable
 private fun AdminOrdersPlaceholder() {
     Column(
@@ -204,15 +181,29 @@ private fun AdminOrdersPlaceholder() {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        Spacer(modifier = Modifier.height(16.dp))
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Text(
+                text = "🚧 Próximamente: Gestión completa de pedidos",
+                modifier = Modifier.padding(16.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
-// Enum para las pestañas principales del admin
+// Enum actualizado para las pestañas principales del admin
 enum class AdminTab(
     val title: String,
     val icon: ImageVector
 ) {
-    MENU("Menú", Icons.Default.RestaurantMenu),
+    CATEGORIES("Categorías", Icons.Default.Category),
+    MENU("Productos", Icons.Default.RestaurantMenu),
     ORDERS("Pedidos", Icons.Default.Receipt),
     PROFILE("Perfil", Icons.Default.Person)
 }

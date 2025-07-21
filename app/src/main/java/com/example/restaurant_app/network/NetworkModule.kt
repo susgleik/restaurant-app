@@ -7,6 +7,7 @@ import com.example.restaurant_app.data.remote.AuthApiService
 import com.example.restaurant_app.data.remote.CartApiService
 import com.example.restaurant_app.data.remote.MenuApiService
 import com.example.restaurant_app.data.remote.OrderApiService
+import com.example.restaurant_app.data.remote.CategoryApiService
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import dagger.Module
 import dagger.Provides
@@ -103,5 +104,11 @@ object NetworkModule {
     @Singleton
     fun provideOrderApiService(retrofit: Retrofit): OrderApiService {
         return retrofit.create(OrderApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideCategoryApiService(retrofit: Retrofit): CategoryApiService {
+        return retrofit.create(CategoryApiService::class.java)
     }
 }
