@@ -1,4 +1,4 @@
-// data/DataModule.kt - Versión simplificada y limpia
+// data/DataModule.kt - Versión completa con repositorios de admin
 package com.example.restaurant_app.data
 
 import android.content.Context
@@ -39,7 +39,7 @@ object DataModule {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // REPOSITORIES (usando API Services del NetworkModule)
+    // CLIENT REPOSITORIES (para usuarios normales)
     // ═══════════════════════════════════════════════════════════════
 
     @Provides
@@ -81,5 +81,17 @@ object DataModule {
         orderApiService: OrderApiService
     ): OrderRepository {
         return OrderRepository(orderApiService)
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ADMIN REPOSITORIES (para staff/administradores)
+    // ═══════════════════════════════════════════════════════════════
+
+    @Provides
+    @Singleton
+    fun provideAdminOrderRepository(
+        orderApiService: OrderApiService // Usando OrderApiService existente temporalmente
+    ): AdminOrderRepository {
+        return AdminOrderRepository(orderApiService)
     }
 }

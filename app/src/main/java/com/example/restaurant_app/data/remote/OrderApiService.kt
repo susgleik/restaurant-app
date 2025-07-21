@@ -24,4 +24,15 @@ interface OrderApiService {
 
     @DELETE("orders/{order_id}")
     suspend fun cancelOrder(@Path("order_id") orderId: String): Response<Unit>
+
+    // ============== ENDPOINT AGREGADO PARA ADMIN ==============
+
+    /**
+     * Actualizar estado de un pedido (para administradores)
+     */
+    @PATCH("orders/{order_id}/status")
+    suspend fun updateOrderStatus(
+        @Path("order_id") orderId: String,
+        @Body statusUpdate: OrderStatusUpdate
+    ): Response<Order>
 }

@@ -1,4 +1,4 @@
-// presentation/screens/admin/AdminMainScreen.kt - Versión completa con gestión de menú y categorías
+// presentation/screens/admin/AdminMainScreen.kt - Versión actualizada con gestión completa de pedidos
 package com.example.restaurant_app.presentation.screens.admin
 
 import android.os.Build
@@ -140,8 +140,9 @@ fun AdminMainScreen(
                     )
                 }
                 AdminTab.ORDERS -> {
-                    // TODO: Implementar gestión de pedidos
-                    AdminOrdersPlaceholder()
+                    AdminOrdersScreen(
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
                 AdminTab.PROFILE -> {
                     ProfileScreen(
@@ -150,49 +151,6 @@ fun AdminMainScreen(
                     )
                 }
             }
-        }
-    }
-}
-
-// Placeholder temporal para pedidos (a implementar más adelante)
-@Composable
-private fun AdminOrdersPlaceholder() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            imageVector = Icons.Default.Receipt,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Gestión de Pedidos",
-            style = MaterialTheme.typography.headlineMedium
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Aquí podrás gestionar todos los pedidos del restaurante",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-        ) {
-            Text(
-                text = "🚧 Próximamente: Gestión completa de pedidos",
-                modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }

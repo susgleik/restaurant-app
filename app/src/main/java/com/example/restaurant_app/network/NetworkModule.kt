@@ -3,11 +3,7 @@ package com.example.restaurant_app.network
 
 import com.example.restaurant_app.BuildConfig
 import com.example.restaurant_app.data.local.TokenManager
-import com.example.restaurant_app.data.remote.AuthApiService
-import com.example.restaurant_app.data.remote.CartApiService
-import com.example.restaurant_app.data.remote.MenuApiService
-import com.example.restaurant_app.data.remote.OrderApiService
-import com.example.restaurant_app.data.remote.CategoryApiService
+import com.example.restaurant_app.data.remote.*
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import dagger.Module
 import dagger.Provides
@@ -82,6 +78,10 @@ object NetworkModule {
             .build()
     }
 
+    // ════════════════════════════════════════════════════════════════
+    // API SERVICES - Cliente (usuarios normales)
+    // ════════════════════════════════════════════════════════════════
+
     @Provides
     @Singleton
     fun provideAuthApiService(retrofit: Retrofit): AuthApiService {
@@ -110,5 +110,15 @@ object NetworkModule {
     @Singleton
     fun provideCategoryApiService(retrofit: Retrofit): CategoryApiService {
         return retrofit.create(CategoryApiService::class.java)
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // API SERVICES - Admin (staff/administradores)
+    // ════════════════════════════════════════════════════════════════
+
+    @Provides
+    @Singleton
+    fun provideAdminOrderApiService(retrofit: Retrofit): AdminOrderApiService {
+        return retrofit.create(AdminOrderApiService::class.java)
     }
 }
