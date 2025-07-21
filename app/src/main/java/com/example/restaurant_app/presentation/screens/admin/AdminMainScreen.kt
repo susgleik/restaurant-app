@@ -1,4 +1,4 @@
-// presentation/screens/admin/AdminMainScreen.kt - Versión actualizada con gestión completa de pedidos
+// presentation/screens/admin/AdminMainScreen.kt - Versión corregida para edge-to-edge
 package com.example.restaurant_app.presentation.screens.admin
 
 import android.os.Build
@@ -45,7 +45,9 @@ fun AdminMainScreen(
     )
 
     Column(
-        modifier = modifier.fillMaxSize()
+        modifier = modifier
+            .fillMaxSize()
+            .statusBarsPadding()
     ) {
         // Top App Bar
         TopAppBar(

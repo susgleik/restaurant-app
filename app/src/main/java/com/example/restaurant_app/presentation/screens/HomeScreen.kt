@@ -64,7 +64,10 @@ fun HomeScreen(
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                // SOLUCIÓN: Agregar windowInsets para manejar correctamente los bordes
+                windowInsets = WindowInsets.navigationBars
+            ) {
                 bottomNavScreens.forEach { screen ->
                     NavigationBarItem(
                         icon = {
@@ -102,7 +105,8 @@ fun HomeScreen(
                 }
             }
         },
-        modifier = modifier
+        contentWindowInsets = WindowInsets.statusBars,
+        modifier = modifier.fillMaxSize()
     ) { innerPadding ->
         NavHost(
             navController = navController,
@@ -200,7 +204,11 @@ private fun OrderDetailScreen(
         viewModel.loadOrderDetails(orderId)
     }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .statusBarsPadding() // SOLUCIÓN: Agregar padding para la barra de estado
+    ) {
         TopAppBar(
             title = { Text("Detalle del Pedido") },
             navigationIcon = {
