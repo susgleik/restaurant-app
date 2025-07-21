@@ -3,15 +3,6 @@ package com.example.restaurant_app.data.models
 import android.annotation.SuppressLint
 import kotlinx.serialization.Serializable
 
-// data/models/Order.kt
-enum class OrderStatus {
-    PENDING,
-    IN_PREPARATION,
-    READY,
-    DELIVERED,
-    CANCELLED
-}
-
 @SuppressLint("UnsafeOptInUsageError")
 @Serializable
 data class OrderItem(

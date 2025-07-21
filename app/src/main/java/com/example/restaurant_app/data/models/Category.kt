@@ -1,4 +1,4 @@
-// data/models/Category.kt
+// data/models/Category.kt - Solo modelos de categorías
 package com.example.restaurant_app.data.models
 
 import kotlinx.serialization.Serializable
@@ -7,15 +7,21 @@ import kotlinx.serialization.Serializable
 data class Category(
     val id: String,
     val name: String,
-    val description: String?,
+    val description: String,
     val active: Boolean,
     val created_at: String
 )
 
 @Serializable
+data class CategoryList(
+    val categories: List<Category>,
+    val total: Int
+)
+
+@Serializable
 data class CategoryCreate(
     val name: String,
-    val description: String? = null,
+    val description: String,
     val active: Boolean = true
 )
 
@@ -24,10 +30,4 @@ data class CategoryUpdate(
     val name: String? = null,
     val description: String? = null,
     val active: Boolean? = null
-)
-
-@Serializable
-data class CategoryList(
-    val categories: List<Category>,
-    val total: Int
 )

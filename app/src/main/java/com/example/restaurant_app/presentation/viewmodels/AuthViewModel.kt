@@ -1,4 +1,4 @@
-// presentation/viewmodels/AuthViewModel.kt
+// presentation/viewmodels/AuthViewModel.kt - Actualizado con roles
 package com.example.restaurant_app.presentation.viewmodels
 
 import androidx.lifecycle.ViewModel
@@ -19,7 +19,11 @@ data class AuthUiState(
     val user: User? = null,
     val errorMessage: String? = null,
     val isLoginSuccessful: Boolean = false,
-    val isRegisterSuccessful: Boolean = false
+    val isRegisterSuccessful: Boolean = false,
+    // ✅ NUEVAS PROPIEDADES para facilitar acceso al rol
+    val userRole: String? = null,
+    val username: String? = null,
+    val userEmail: String? = null
 )
 
 @HiltViewModel
@@ -66,6 +70,10 @@ class AuthViewModel @Inject constructor(
                             isLoading = false,
                             isLoggedIn = true,
                             user = result.data.user,
+                            // ✅ NUEVAS LÍNEAS - Extraer datos del usuario para fácil acceso
+                            userRole = result.data.user.role,
+                            username = result.data.user.username,
+                            userEmail = result.data.user.email,
                             errorMessage = null,
                             isLoginSuccessful = true
                         )
@@ -128,6 +136,10 @@ class AuthViewModel @Inject constructor(
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
                             user = result.data,
+                            // ✅ NUEVAS LÍNEAS - Actualizar datos del usuario
+                            userRole = result.data.role,
+                            username = result.data.username,
+                            userEmail = result.data.email,
                             isLoggedIn = true
                         )
                     }
@@ -136,7 +148,11 @@ class AuthViewModel @Inject constructor(
                             isLoading = false,
                             errorMessage = result.message,
                             isLoggedIn = false,
-                            user = null
+                            user = null,
+                            // ✅ NUEVAS LÍNEAS - Limpiar datos del usuario
+                            userRole = null,
+                            username = null,
+                            userEmail = null
                         )
                     }
                 }
@@ -180,13 +196,18 @@ class AuthViewModel @Inject constructor(
      * Verificar si el usuario es admin
      */
     fun isAdmin(): Boolean {
-        return _uiState.value.user?.role == "ADMIN_STAFF"
+        return _uiState.value.userRole == "ADMIN_STAFF"
     }
 
     /**
      * Verificar si el usuario es cliente
      */
     fun isClient(): Boolean {
-        return _uiState.value.user?.role == "CLIENT"
+        return _uiState.value.userRole == "CLIENT"
+    }
+
+    // ✅ NUEVO MÉTODO - Verificar si es admin staff de forma más clara
+    fun isAdminStaff(): Boolean {
+        return _uiState.value.userRole == "ADMIN_STAFF"
     }
 }

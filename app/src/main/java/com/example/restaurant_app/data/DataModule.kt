@@ -1,10 +1,13 @@
-// data/DataModule.kt
+// data/DataModule.kt - Versión simplificada y limpia
 package com.example.restaurant_app.data
 
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.restaurant_app.data.local.TokenManager
+import com.example.restaurant_app.data.remote.*
+import com.example.restaurant_app.data.repository.*
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -19,9 +22,64 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 @InstallIn(SingletonComponent::class)
 object DataModule {
 
+    // ═══════════════════════════════════════════════════════════════
+    // LOCAL DATA (DataStore & TokenManager)
+    // ═══════════════════════════════════════════════════════════════
+
     @Provides
     @Singleton
     fun provideDataStore(@ApplicationContext context: Context): DataStore<Preferences> {
         return context.dataStore
+    }
+
+    @Provides
+    @Singleton
+    fun provideTokenManager(dataStore: DataStore<Preferences>): TokenManager {
+        return TokenManager(dataStore)
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // REPOSITORIES (usando API Services del NetworkModule)
+    // ═══════════════════════════════════════════════════════════════
+
+    @Provides
+    @Singleton
+    fun provideAuthRepository(
+        authApiService: AuthApiService,
+        tokenManager: TokenManager
+    ): AuthRepository {
+        return AuthRepository(authApiService, tokenManager)
+    }
+
+    @Provides
+    @Singleton
+    fun provideMenuRepository(
+        menuApiService: MenuApiService
+    ): MenuRepository {
+        return MenuRepository(menuApiService)
+    }
+
+    @Provides
+    @Singleton
+    fun provideCategoryRepository(
+        menuApiService: MenuApiService
+    ): CategoryRepository {
+        return CategoryRepository(menuApiService)
+    }
+
+    @Provides
+    @Singleton
+    fun provideCartRepository(
+        cartApiService: CartApiService
+    ): CartRepository {
+        return CartRepository(cartApiService)
+    }
+
+    @Provides
+    @Singleton
+    fun provideOrderRepository(
+        orderApiService: OrderApiService
+    ): OrderRepository {
+        return OrderRepository(orderApiService)
     }
 }
