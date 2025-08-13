@@ -20,15 +20,17 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         //Configuracion para URLs base
-        buildConfigField("String", "BASE_URL", "\"https://restaurant-backend-x0sz.onrender.com/\"")
+        buildConfigField("String", "BASE_URL", "\"https://restaurant-backend-x0sz.onrender.com/\"") // user para build
+        //buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8000/\"") //usar para testing
         buildConfigField("String", "API_VERSION", "\"api/v1/\"")
     }
 
     buildTypes {
         debug {
             isDebuggable = true
-            buildConfigField("String", "BASE_URL", "\"https://restaurant-backend-x0sz.onrender.com/\"") // Para emulador
-            buildConfigField("String", "BASE_URL", "\"https://restaurant-backend-x0sz.onrender.com/\"") // Para dispositivo físico
+            buildConfigField("String", "BASE_URL", "\"https://restaurant-backend-x0sz.onrender.com/\"") // Para emulador - build
+            buildConfigField("String", "BASE_URL", "\"https://restaurant-backend-x0sz.onrender.com/\"") // Para dispositivo físico - build
+            //buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8000/\"") // usar para test
         }
         release {
             isMinifyEnabled = false
