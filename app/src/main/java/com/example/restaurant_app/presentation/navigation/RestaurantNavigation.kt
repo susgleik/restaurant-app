@@ -2,6 +2,9 @@ package com.example.restaurant_app.presentation.navigation
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -18,6 +21,7 @@ fun RestaurantNavigation(
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
     val authUiState by authViewModel.uiState.collectAsState()
+    var showSessionExpiredDialog by remember { mutableStateOf(false) }
 
     // Determinar la ruta inicial basada en el estado de autenticación
     val startDestination = if (authUiState.isLoggedIn) "main" else "auth"
@@ -32,6 +36,35 @@ fun RestaurantNavigation(
             }
             authViewModel.clearLoginSuccess()
         }
+    }
+
+    // Detectar sesión expirada (401 desde el interceptor)
+    LaunchedEffect(Unit) {
+        authViewModel.sessionExpiredEvents.collect {
+            showSessionExpiredDialog = true
+        }
+    }
+
+    // Diálogo de sesión expirada
+    if (showSessionExpiredDialog) {
+        AlertDialog(
+            onDismissRequest = { /* No se puede cerrar sin confirmar */ },
+            title = { Text("Sesión expirada") },
+            text = { Text("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showSessionExpiredDialog = false
+                        authViewModel.logout()
+                        navController.navigate("auth") {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                ) {
+                    Text("Iniciar sesión")
+                }
+            }
+        )
     }
 
     NavHost(

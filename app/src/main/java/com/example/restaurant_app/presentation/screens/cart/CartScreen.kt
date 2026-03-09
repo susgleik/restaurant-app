@@ -535,7 +535,7 @@ private fun ErrorCartContent(
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Default.Error,
+            imageVector = Icons.Default.WifiOff,
             contentDescription = null,
             modifier = Modifier.size(80.dp),
             tint = MaterialTheme.colorScheme.error
@@ -544,21 +544,38 @@ private fun ErrorCartContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Error al cargar carrito",
+            text = "No se pudo cargar el carrito",
             style = MaterialTheme.typography.headlineSmall,
             textAlign = TextAlign.Center
         )
 
+        Spacer(modifier = Modifier.height(8.dp))
+
         Text(
-            text = message,
+            text = "Verifica tu conexión e inténtalo de nuevo",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.error
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.outline
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(onClick = onRetry) {
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
             Text("Reintentar")
         }
     }

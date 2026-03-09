@@ -59,6 +59,17 @@ fun MenuScreen(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
+        // Contador de resultados cuando hay búsqueda o filtro activo
+        val hasActiveFilter = searchQuery.isNotBlank() || uiState.selectedCategory != null
+        if (hasActiveFilter && uiState.menuItems.isNotEmpty() && !uiState.isLoading) {
+            Text(
+                text = "${uiState.menuItems.size} producto${if (uiState.menuItems.size != 1) "s" else ""} encontrado${if (uiState.menuItems.size != 1) "s" else ""}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
         // Contenido principal
         Box(
             modifier = Modifier.fillMaxSize()
@@ -80,12 +91,20 @@ fun MenuScreen(
                 }
 
                 uiState.menuItems.isEmpty() -> {
+                    val hasActiveFilter = searchQuery.isNotBlank() || uiState.selectedCategory != null
                     EmptyMenuState(
-                        message = if (searchQuery.isNotBlank()) {
-                            "No se encontraron productos para \"$searchQuery\""
-                        } else {
-                            "No hay productos disponibles"
+                        message = when {
+                            searchQuery.isNotBlank() -> "No se encontraron productos para \"$searchQuery\""
+                            uiState.selectedCategory != null -> "No hay productos en esta categoría"
+                            else -> "No hay productos disponibles"
                         },
+                        onAction = if (hasActiveFilter) {
+                            {
+                                viewModel.updateSearchQuery("")
+                                viewModel.selectCategory(null)
+                            }
+                        } else null,
+                        actionLabel = "Ver todos los productos",
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }

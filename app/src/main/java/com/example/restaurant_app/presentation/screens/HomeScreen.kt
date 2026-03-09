@@ -53,6 +53,29 @@ fun HomeScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
     val cartSummary by cartViewModel.cartSummary.collectAsStateWithLifecycle()
+    val cartUiState by cartViewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Mostrar snackbar cuando se agrega un producto al carrito
+    LaunchedEffect(cartUiState.successMessage) {
+        cartUiState.successMessage?.let { message ->
+            val result = snackbarHostState.showSnackbar(
+                message = message,
+                actionLabel = "Ver carrito",
+                duration = SnackbarDuration.Short
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                navController.navigate(Screen.Cart.route) {
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }
+            cartViewModel.clearMessages()
+        }
+    }
 
     // Lista de pantallas para la navegación inferior
     val bottomNavScreens = listOf(
@@ -63,6 +86,7 @@ fun HomeScreen(
     )
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             NavigationBar(
                 // SOLUCIÓN: Agregar windowInsets para manejar correctamente los bordes

@@ -41,7 +41,7 @@ Análisis basado en el código actual. Priorizado por impacto en experiencia de 
 
 ---
 
-### 3. Estados vacíos y de error poco informativos
+### ✅ 3. Estados vacíos y de error poco informativos — COMPLETADO
 **Problema:** Varios screens muestran mensajes genéricos ("Error al cargar", "No hay items") sin contexto ni acciones de recuperación claras.
 
 **Archivos afectados:**
@@ -50,14 +50,14 @@ Análisis basado en el código actual. Priorizado por impacto en experiencia de 
 - `presentation/screens/menu/MenuScreen.kt` — empty state cuando el filtro no da resultados vs cuando no hay datos
 
 **Mejoras:**
-- Distinguir "sin resultados para tu búsqueda" (con botón limpiar filtros) vs "error de red" (con botón reintentar)
-- En `OrdersScreen` empty state: agregar botón "Ir al Menú"
-- En `CartScreen` error state: mostrar si fue un error de red o sesión expirada
-- Ilustraciones/iconos más descriptivos por tipo de estado vacío
+- ✅ `EmptyMenuState`: añadido `onAction` opcional; `MenuScreen` distingue: búsqueda vacía / categoría sin productos / sin datos, y pasa "Ver todos los productos" como CTA cuando hay filtro activo
+- ✅ `OrdersScreen`: añadido `onNavigateToMenu`; ambos empty states (Activos e Historial) muestran botón "Ir al Menú"
+- ✅ `ErrorOrdersContent`: icono `WifiOff`, hint de conexión, mensaje técnico en texto pequeño/muted, botón Refresh
+- ✅ `ErrorCartContent`: misma estructura mejorada — hint de conexión, mensaje técnico muted, botón con icono Refresh
 
 ---
 
-### 4. Confirmación de acciones destructivas inconsistente
+### ✅ 4. Confirmación de acciones destructivas inconsistente — COMPLETADO
 **Problema:** Hay confirmación para "vaciar carrito" y "cerrar sesión", pero **no** para eliminar categoría, eliminar producto del menú, ni cancelar pedido desde admin.
 
 **Archivos afectados:**
@@ -66,13 +66,13 @@ Análisis basado en el código actual. Priorizado por impacto en experiencia de 
 - `presentation/screens/admin/AdminOrdersScreen.kt` — cancelar pedido sin confirm
 
 **Mejoras:**
-- Agregar `AlertDialog` de confirmación antes de cualquier operación destructiva
-- Mostrar qué se va a eliminar ("¿Eliminar 'Hamburguesa Clásica'?")
-- Para cancelación de pedido: mostrar el ID del pedido en el diálogo
+- ✅ `AdminCategoriesScreen`: `AlertDialog` de confirmación mostrando nombre de la categoría en rojo antes de eliminar
+- ✅ `AdminMenuScreen`: `AlertDialog` de confirmación mostrando nombre del producto en rojo antes de eliminar
+- ✅ `AdminOrdersScreen`: `AlertDialog` de confirmación en `OrderActionButtons` antes de cambiar status a CANCELLED
 
 ---
 
-### 5. Feedback insuficiente en operaciones de carrito
+### ✅ 5. Feedback insuficiente en operaciones de carrito — COMPLETADO
 **Problema:** Al agregar un ítem al carrito desde `MenuScreen` o `MenuItemDetailScreen`, no hay confirmación visual inmediata (no hay snackbar, toast, ni animación). El usuario debe ir al carrito para confirmar que funcionó.
 
 **Archivos afectados:**
@@ -81,13 +81,12 @@ Análisis basado en el código actual. Priorizado por impacto en experiencia de 
 - `presentation/components/MenuComponents.kt` — botón "Agregar"
 
 **Mejoras:**
-- Mostrar `Snackbar` con "Agregado al carrito" + acción "Ver carrito"
-- Animación de "volar al carrito" en el badge del BottomNav o un micro-animation en el botón
-- El botón "Agregar" debe cambiar a "En el carrito ✓" momentáneamente antes de resetear
+- ✅ `HomeScreen`: añadido `SnackbarHostState` + `SnackbarHost` en el `Scaffold`; `LaunchedEffect` observa `cartUiState.successMessage` (ya lo establece `CartViewModel.addToCart`) y muestra snackbar con acción "Ver carrito" que navega directamente a `Screen.Cart`
+- ⬜ Animación micro en el botón "Agregar" o badge del BottomNav (complejidad alta, valor incremental)
 
 ---
 
-### 6. Sin manejo de token expirado durante sesión activa
+### ✅ 6. Sin manejo de token expirado durante sesión activa — COMPLETADO
 **Problema:** Si el JWT expira mientras el usuario está navegando (30 min), las llamadas a la API devuelven 401 pero la app muestra errores genéricos en lugar de redirigir al login.
 
 **Archivos afectados:**
@@ -95,15 +94,17 @@ Análisis basado en el código actual. Priorizado por impacto en experiencia de 
 - Todos los repositorios — manejan errores HTTP pero no distinguen 401
 
 **Mejoras:**
-- En `AuthInterceptor`, interceptar respuestas 401 → limpiar token → emitir evento de logout
-- Usar un `SharedFlow` en `AuthViewModel` para eventos de sesión expirada
-- Mostrar diálogo "Tu sesión expiró, inicia sesión nuevamente" antes de redirigir
+- ✅ Creado `network/SessionManager.kt`: singleton con `MutableSharedFlow<Unit>` y `notifySessionExpired()` thread-safe via `tryEmit`
+- ✅ `AuthInterceptor`: si `response.code == 401` → `tokenManager.clearTokens()` + `sessionManager.notifySessionExpired()`
+- ✅ `NetworkModule`: `provideAuthInterceptor` actualizado para recibir `SessionManager`
+- ✅ `AuthViewModel`: inyecta `SessionManager`, expone `sessionExpiredEvents: SharedFlow<Unit>`
+- ✅ `RestaurantNavigation`: `LaunchedEffect` recolecta el flow → muestra `AlertDialog` → al confirmar, `logout()` + navega a `auth`
 
 ---
 
 ## PRIORIDAD MEDIA — Mejoras de flujo y funcionalidades faltantes
 
-### 7. Búsqueda en MenuScreen sin debounce ni limpiar
+### ✅ 7. Búsqueda en MenuScreen sin debounce ni limpiar — COMPLETADO
 **Problema:** El campo de búsqueda en `MenuScreen` filtra en cada keystroke sin debounce, lo que puede causar flickering con muchos items. Además, no hay botón X para limpiar el texto.
 
 **Archivos afectados:**
@@ -111,9 +112,9 @@ Análisis basado en el código actual. Priorizado por impacto en experiencia de 
 - `presentation/components/MenuComponents.kt` — `SearchBar`
 
 **Mejoras:**
-- Agregar `debounce(300ms)` en el Flow de búsqueda dentro del ViewModel
-- Agregar ícono `Clear (X)` al campo cuando tenga texto
-- Mostrar contador de resultados ("12 productos encontrados")
+- ✅ `MenuViewModel`: `updateSearchQuery` ya no dispara búsquedas directamente; colector en `init` con `debounce(300L).distinctUntilChanged()` controla las llamadas al repositorio
+- ✅ `SearchBar`: `trailingIcon` muestra `Icons.Default.Clear` cuando `query.isNotBlank()` — al tocar llama `onQueryChange("")`
+- ✅ `MenuScreen`: muestra contador "N producto(s) encontrado(s)" cuando hay filtro activo y resultados
 
 ---
 

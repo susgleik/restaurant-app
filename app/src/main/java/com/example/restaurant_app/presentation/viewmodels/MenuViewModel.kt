@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.restaurant_app.data.models.*
 import com.example.restaurant_app.data.repository.MenuRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -20,6 +21,7 @@ data class MenuUiState(
     val selectedMenuItem: MenuItemWithCategory? = null
 )
 
+@OptIn(FlowPreview::class)
 @HiltViewModel
 class MenuViewModel @Inject constructor(
     private val menuRepository: MenuRepository
@@ -34,6 +36,20 @@ class MenuViewModel @Inject constructor(
     init {
         loadCategories()
         loadMenuItems()
+
+        // Debounce: esperar 300ms después del último keystroke antes de buscar
+        viewModelScope.launch {
+            _searchQuery
+                .debounce(300L)
+                .distinctUntilChanged()
+                .collect { query ->
+                    if (query.isBlank()) {
+                        loadMenuItems(_uiState.value.selectedCategory?.id)
+                    } else {
+                        searchMenuItems(query)
+                    }
+                }
+        }
     }
 
     fun loadCategories() {
@@ -106,12 +122,7 @@ class MenuViewModel @Inject constructor(
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
         _uiState.value = _uiState.value.copy(searchQuery = query)
-
-        if (query.isBlank()) {
-            loadMenuItems(_uiState.value.selectedCategory?.id)
-        } else {
-            searchMenuItems(query)
-        }
+        // La búsqueda se dispara desde el colector con debounce en init
     }
 
     private fun searchMenuItems(query: String) {

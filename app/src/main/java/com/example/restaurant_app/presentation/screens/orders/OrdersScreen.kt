@@ -28,6 +28,7 @@ import java.util.*
 @Composable
 fun OrdersScreen(
     onOrderClick: (String) -> Unit = {},
+    onNavigateToMenu: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: OrderViewModel = hiltViewModel()
 ) {
@@ -127,7 +128,8 @@ fun OrdersScreen(
                 if (uiState.activeOrders.isEmpty()) {
                     EmptyOrdersContent(
                         title = "No tienes pedidos activos",
-                        subtitle = "Tus pedidos en proceso aparecerán aquí"
+                        subtitle = "Tus pedidos en proceso aparecerán aquí",
+                        onNavigateToMenu = onNavigateToMenu
                     )
                 } else {
                     OrdersList(
@@ -144,7 +146,8 @@ fun OrdersScreen(
                 if (uiState.orderHistory.isEmpty()) {
                     EmptyOrdersContent(
                         title = "No tienes historial de pedidos",
-                        subtitle = "Tus pedidos completados aparecerán aquí"
+                        subtitle = "Aquí verás todos tus pedidos anteriores",
+                        onNavigateToMenu = onNavigateToMenu
                     )
                 } else {
                     OrdersList(
@@ -430,7 +433,8 @@ private fun CancelOrderDialog(
 @Composable
 private fun EmptyOrdersContent(
     title: String,
-    subtitle: String
+    subtitle: String,
+    onNavigateToMenu: (() -> Unit)? = null
 ) {
     Column(
         modifier = Modifier
@@ -454,12 +458,30 @@ private fun EmptyOrdersContent(
             textAlign = TextAlign.Center
         )
 
+        Spacer(modifier = Modifier.height(8.dp))
+
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+
+        if (onNavigateToMenu != null) {
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(
+                onClick = onNavigateToMenu,
+                modifier = Modifier.fillMaxWidth(0.7f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Restaurant,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Ir al Menú")
+            }
+        }
     }
 }
 
@@ -492,7 +514,7 @@ private fun ErrorOrdersContent(
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Default.Error,
+            imageVector = Icons.Default.WifiOff,
             contentDescription = null,
             modifier = Modifier.size(80.dp),
             tint = MaterialTheme.colorScheme.error
@@ -501,21 +523,38 @@ private fun ErrorOrdersContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Error al cargar pedidos",
+            text = "No se pudieron cargar los pedidos",
             style = MaterialTheme.typography.headlineSmall,
             textAlign = TextAlign.Center
         )
 
+        Spacer(modifier = Modifier.height(8.dp))
+
         Text(
-            text = message,
+            text = "Verifica tu conexión a internet e inténtalo de nuevo",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.error
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.outline
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(onClick = onRetry) {
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
             Text("Reintentar")
         }
     }

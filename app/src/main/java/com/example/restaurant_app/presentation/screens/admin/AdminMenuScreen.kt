@@ -37,6 +37,7 @@ fun AdminMenuScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    var menuItemToDelete by remember { mutableStateOf<MenuItem?>(null) }
 
     // Manejar mensajes
     LaunchedEffect(uiState.successMessage) {
@@ -140,7 +141,7 @@ fun AdminMenuScreen(
                         menuItems = uiState.menuItems,
                         onEditClick = { viewModel.showEditDialog(it) },
                         onToggleAvailability = { viewModel.toggleItemAvailability(it) },
-                        onDeleteClick = { viewModel.deleteMenuItem(it.id) },
+                        onDeleteClick = { menuItemToDelete = it },
                         isDeleting = uiState.isDeleting,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -159,6 +160,50 @@ fun AdminMenuScreen(
                     contentDescription = "Actualizar menú"
                 )
             }
+        }
+
+        // Dialog de confirmación para eliminar producto
+        menuItemToDelete?.let { menuItem ->
+            AlertDialog(
+                onDismissRequest = { menuItemToDelete = null },
+                title = { Text("Eliminar producto") },
+                text = {
+                    Column {
+                        Text("¿Estás seguro de eliminar el producto?")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "\"${menuItem.name}\"",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Esta acción no se puede deshacer.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.deleteMenuItem(menuItem.id)
+                            menuItemToDelete = null
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Eliminar")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { menuItemToDelete = null }) {
+                        Text("Cancelar")
+                    }
+                }
+            )
         }
 
         // Dialog para crear/editar producto

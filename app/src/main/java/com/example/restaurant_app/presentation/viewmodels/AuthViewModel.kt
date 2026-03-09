@@ -6,8 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.example.restaurant_app.data.models.User
 import com.example.restaurant_app.data.repository.AuthRepository
 import com.example.restaurant_app.data.repository.AuthResult
+import com.example.restaurant_app.network.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -28,11 +30,14 @@ data class AuthUiState(
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val sessionManager: SessionManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
+
+    val sessionExpiredEvents: SharedFlow<Unit> = sessionManager.sessionExpiredEvents
 
     init {
         checkLoginStatus()

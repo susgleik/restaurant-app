@@ -45,8 +45,8 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideAuthInterceptor(tokenManager: TokenManager): AuthInterceptor {
-        return AuthInterceptor(tokenManager)
+    fun provideAuthInterceptor(tokenManager: TokenManager, sessionManager: SessionManager): AuthInterceptor {
+        return AuthInterceptor(tokenManager, sessionManager)
     }
 
     @Provides

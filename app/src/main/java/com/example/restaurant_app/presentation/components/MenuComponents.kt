@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ImageNotSupported
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -114,6 +115,17 @@ fun SearchBar(
                 contentDescription = "Buscar",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        },
+        trailingIcon = {
+            if (query.isNotBlank()) {
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(
+                        imageVector = Icons.Default.Clear,
+                        contentDescription = "Limpiar búsqueda",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         },
         singleLine = true,
         shape = RoundedCornerShape(12.dp),
@@ -330,6 +342,8 @@ fun LoadingCard(
 @Composable
 fun EmptyMenuState(
     message: String = "No se encontraron productos",
+    onAction: (() -> Unit)? = null,
+    actionLabel: String = "Limpiar filtros",
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -350,6 +364,13 @@ fun EmptyMenuState(
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+
+        if (onAction != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            TextButton(onClick = onAction) {
+                Text(actionLabel)
+            }
+        }
     }
 }
 

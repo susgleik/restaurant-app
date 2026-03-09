@@ -713,6 +713,44 @@ private fun OrderActionButtons(
     currentStatus: OrderStatus,
     onUpdateStatus: (OrderStatus) -> Unit
 ) {
+    var showCancelConfirm by remember { mutableStateOf(false) }
+
+    if (showCancelConfirm) {
+        AlertDialog(
+            onDismissRequest = { showCancelConfirm = false },
+            title = { Text("Cancelar pedido") },
+            text = {
+                Column {
+                    Text("¿Estás seguro de que quieres cancelar este pedido?")
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Esta acción no se puede deshacer.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onUpdateStatus(OrderStatus.CANCELLED)
+                        showCancelConfirm = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Cancelar pedido")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCancelConfirm = false }) {
+                    Text("No cancelar")
+                }
+            }
+        )
+    }
+
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -736,7 +774,7 @@ private fun OrderActionButtons(
                 }
 
                 OutlinedButton(
-                    onClick = { onUpdateStatus(OrderStatus.CANCELLED) },
+                    onClick = { showCancelConfirm = true },
                     modifier = Modifier.height(32.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp),
                     colors = ButtonDefaults.outlinedButtonColors(

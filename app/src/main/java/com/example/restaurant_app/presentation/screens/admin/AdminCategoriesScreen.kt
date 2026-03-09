@@ -31,6 +31,7 @@ fun AdminCategoriesScreen(
     viewModel: AdminCategoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var categoryToDelete by remember { mutableStateOf<Category?>(null) }
 
     // Manejar mensajes
     LaunchedEffect(uiState.successMessage) {
@@ -109,12 +110,56 @@ fun AdminCategoriesScreen(
                         categories = uiState.categories,
                         onEditClick = { viewModel.showEditDialog(it) },
                         onToggleStatus = { viewModel.toggleCategoryStatus(it) },
-                        onDeleteClick = { viewModel.deleteCategory(it.id) },
+                        onDeleteClick = { categoryToDelete = it },
                         isDeleting = uiState.isDeleting,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
             }
+        }
+
+        // Dialog de confirmación para eliminar categoría
+        categoryToDelete?.let { category ->
+            AlertDialog(
+                onDismissRequest = { categoryToDelete = null },
+                title = { Text("Eliminar categoría") },
+                text = {
+                    Column {
+                        Text("¿Estás seguro de eliminar la categoría?")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "\"${category.name}\"",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Esta acción no se puede deshacer.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.deleteCategory(category.id)
+                            categoryToDelete = null
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Eliminar")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { categoryToDelete = null }) {
+                        Text("Cancelar")
+                    }
+                }
+            )
         }
 
         // Dialog para crear/editar categoría
