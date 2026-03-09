@@ -5,13 +5,18 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -352,6 +357,8 @@ private fun CategoryDialog(
     var description by remember(category) { mutableStateOf(category?.description ?: "") }
     var active by remember(category) { mutableStateOf(category?.active ?: true) }
 
+    val descriptionFocusRequester = remember { FocusRequester() }
+
     val isValid = name.isNotBlank()
 
     AlertDialog(
@@ -372,6 +379,8 @@ private fun CategoryDialog(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("Nombre") },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { descriptionFocusRequester.requestFocus() }),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     isError = name.isBlank(),
@@ -384,7 +393,7 @@ private fun CategoryDialog(
                     value = description,
                     onValueChange = { description = it },
                     label = { Text("Descripción") },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().focusRequester(descriptionFocusRequester),
                     maxLines = 3
                 )
 

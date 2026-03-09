@@ -119,7 +119,7 @@ La navegación se adapta automáticamente según el rol del usuario.
 
 Para información técnica detallada sobre la arquitectura, patrones de diseño y flujos de datos, consultar:
 
-📖 **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Documentación técnica completa
+📖 **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - Documentación técnica completa
 
 ## 🧪 Testing
 

@@ -13,19 +13,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.restaurant_app.data.models.Category
 import com.example.restaurant_app.data.models.MenuItem
 import com.example.restaurant_app.presentation.components.CategoryChips
 import com.example.restaurant_app.presentation.components.MenuItemDialog
+import com.example.restaurant_app.presentation.components.ProductImage
 import com.example.restaurant_app.presentation.components.SearchBar
 import com.example.restaurant_app.presentation.viewmodels.AdminMenuViewModel
 import com.example.restaurant_app.presentation.viewmodels.MenuDialogType
@@ -249,32 +246,13 @@ private fun AdminMenuItemCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Imagen del producto
-            if (!menuItem.image_url.isNullOrBlank()) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(menuItem.image_url)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = menuItem.name,
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Surface(
-                    modifier = Modifier.size(80.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ImageNotSupported,
-                        contentDescription = null,
-                        modifier = Modifier.padding(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+            ProductImage(
+                imageUrl = menuItem.image_url,
+                contentDescription = menuItem.name,
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(RoundedCornerShape(8.dp))
+            )
 
             // Información del producto
             Column(

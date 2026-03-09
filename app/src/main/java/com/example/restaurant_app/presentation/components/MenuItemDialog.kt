@@ -3,6 +3,7 @@ package com.example.restaurant_app.presentation.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -11,6 +12,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -41,6 +46,10 @@ fun MenuItemDialog(
     var showCategoryDropdown by remember { mutableStateOf(false) }
     var nameError by remember { mutableStateOf(false) }
     var priceError by remember { mutableStateOf(false) }
+
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val descriptionFocusRequester = remember { FocusRequester() }
+    val imageUrlFocusRequester = remember { FocusRequester() }
 
     val selectedCategory = categories.find { it.id == selectedCategoryId }
     val price = priceText.toDoubleOrNull()
@@ -146,6 +155,8 @@ fun MenuItemDialog(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("Nombre del producto") },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { descriptionFocusRequester.requestFocus() }),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     isError = nameError,
@@ -159,7 +170,7 @@ fun MenuItemDialog(
                     value = description,
                     onValueChange = { description = it },
                     label = { Text("Descripción (opcional)") },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().focusRequester(descriptionFocusRequester),
                     maxLines = 3,
                     minLines = 2
                 )
@@ -169,9 +180,10 @@ fun MenuItemDialog(
                     value = priceText,
                     onValueChange = { priceText = it },
                     label = { Text("Precio") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { imageUrlFocusRequester.requestFocus() }),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     prefix = { Text("$") },
                     isError = priceError,
                     supportingText = if (priceError) {
@@ -184,7 +196,9 @@ fun MenuItemDialog(
                     value = imageUrl,
                     onValueChange = { imageUrl = it },
                     label = { Text("URL de imagen (opcional)") },
-                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() }),
+                    modifier = Modifier.fillMaxWidth().focusRequester(imageUrlFocusRequester),
                     singleLine = true,
                     placeholder = { Text("https://ejemplo.com/imagen.jpg") }
                 )

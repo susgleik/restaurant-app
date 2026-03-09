@@ -14,14 +14,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.restaurant_app.data.models.MenuItemWithCategory
+import com.example.restaurant_app.presentation.components.ProductImage
 import com.example.restaurant_app.presentation.viewmodels.MenuViewModel
 import com.example.restaurant_app.presentation.viewmodels.CartViewModel
 import java.text.NumberFormat
@@ -135,21 +133,15 @@ private fun MenuItemDetailContent(
                 .padding(16.dp)
         ) {
             // Imagen del producto
-            if (!menuItem.image_url.isNullOrBlank()) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(menuItem.image_url)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = menuItem.name,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(250.dp)
-                        .clip(RoundedCornerShape(12.dp)),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-            }
+            ProductImage(
+                imageUrl = menuItem.image_url,
+                contentDescription = menuItem.name,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(250.dp)
+                    .clip(RoundedCornerShape(12.dp))
+            )
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Información del producto
             Text(
